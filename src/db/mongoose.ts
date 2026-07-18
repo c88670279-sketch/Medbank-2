@@ -21,7 +21,7 @@ function getCleanedURI(uri: string | undefined): string | undefined {
 }
 
 export async function connectDB() {
-  if (mongoose.connection.readyState >= 1) {
+  if (mongoose.connection.readyState === 1) {
     return mongoose.connection;
   }
 
@@ -35,8 +35,17 @@ export async function connectDB() {
   try {
     const conn = await mongoose.connect(cleanedURI);
     console.log(`Successfully connected to MongoDB Atlas: ${conn.connection.host}`);
-    // Trigger seeding of default medical dataset
-    await seedInitialData();
+    
+    // Trigger seeding of default medical dataset.
+    // On Vercel, run seeding in the background to avoid blocking serverless request handling.
+    if (process.env.VERCEL) {
+      seedInitialData().catch((err) => {
+        console.error('Background seeding error in Vercel environment:', err);
+      });
+    } else {
+      await seedInitialData();
+    }
+    
     return conn.connection;
   } catch (error: any) {
     console.error('Error connecting to MongoDB Atlas:', error);

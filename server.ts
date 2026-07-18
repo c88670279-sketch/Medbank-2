@@ -2,7 +2,6 @@ import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import { connectDB, UserModel, SubjectModel, ChapterModel, NoteModel, PdfModel, QuestionModel, TestModel, TestResultModel, AnnouncementModel, FlashcardModel, VideoModel, TopicModel, TrashModel } from './src/db/mongoose';
 import mongoose from 'mongoose';
@@ -115,10 +114,46 @@ async function ensureSubjectAndChapter(subjectName: string, chapterName: string)
 }
 
 const app = express();
+export { app };
 const PORT = 3000;
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Middleware to handle Vercel routing path mismatches and ensure correct req.url for API requests only
+app.use((req, res, next) => {
+  const forwardedUrl = (req.headers['x-forwarded-url'] as string) || (req.headers['x-original-url'] as string);
+  const vercelForwardedPath = (req.headers['x-vercel-forwarded-path'] as string) || (req.headers['x-forwarded-path'] as string);
+  
+  // Try to determine the original requested path from the client
+  let originalPath = req.url;
+  if (vercelForwardedPath) {
+    originalPath = vercelForwardedPath;
+  } else if (forwardedUrl) {
+    try {
+      const parsedUrl = new URL(forwardedUrl, `http://${req.headers.host || 'localhost'}`);
+      originalPath = parsedUrl.pathname;
+    } catch (e) {
+      if (forwardedUrl.startsWith('/')) {
+        originalPath = forwardedUrl;
+      }
+    }
+  }
+
+  console.log(`[Vercel Route Debug] Incoming: ${req.method} ${req.url} | originalPath: ${originalPath}`);
+
+  // Only rewrite req.url if the original request was indeed intended for the API
+  if (originalPath.startsWith('/api')) {
+    if (!req.url.startsWith('/api')) {
+      const queryPart = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+      const pathPart = req.url.split('?')[0];
+      req.url = '/api' + (pathPart.startsWith('/') ? pathPart : '/' + pathPart) + queryPart;
+      console.log(`[Vercel Route Fix] Restored API path: "${originalPath}" -> "${req.url}"`);
+    }
+  }
+
+  next();
+});
 
 // Lazy-initialization of GoogleGenAI
 let aiClient: GoogleGenAI | null = null;
@@ -3665,6 +3700,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 async function startServer() {
   // 1. Initialize Vite or static file serving first
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -3690,4 +3726,19 @@ async function startServer() {
   });
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+} else {
+  console.log('Vercel environment detected. Initiating database connection and bypassing server.listen...');
+  
+  // Register static file serving and wildcard route for Vercel too as a safe fallback
+  const distPath = path.join(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+
+  connectDB().catch((err) => {
+    console.error('Failed to connect to MongoDB Atlas in Vercel environment:', err);
+  });
+}

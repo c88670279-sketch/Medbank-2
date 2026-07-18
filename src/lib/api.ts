@@ -349,6 +349,12 @@ export async function registerUser(params: { email: string; name: string; role: 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params)
     });
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Non-JSON response for register:', text.slice(0, 300));
+      return { success: false, error: `Server error (${response.status}). Could not authenticate.` };
+    }
     const data = await response.json();
     return data;
   } catch (error: any) {
@@ -364,6 +370,12 @@ export async function loginUser(email: string, password?: string): Promise<{ suc
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Non-JSON response for login:', text.slice(0, 300));
+      return { success: false, error: `Server error (${response.status}). Authentication route failed.` };
+    }
     const data = await response.json();
     return data;
   } catch (error: any) {
