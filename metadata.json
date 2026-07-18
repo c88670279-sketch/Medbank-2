@@ -1,0 +1,6 @@
+{
+  "name": "MedBank AI – MBBS 2nd Year",
+  "description": "The ultimate clinical learning companion for 2nd-year MBBS students to master Pathology, Pharmacology, and Microbiology with board-style question banks and live AI clinical tutoring.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
