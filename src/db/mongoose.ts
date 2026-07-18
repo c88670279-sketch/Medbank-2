@@ -25,6 +25,21 @@ export async function connectDB() {
     return mongoose.connection;
   }
 
+  // If already connecting, wait for it to complete
+  if (mongoose.connection.readyState === 2) {
+    await new Promise<void>((resolve) => {
+      const checkInterval = setInterval(() => {
+        if ((mongoose.connection.readyState as any) !== 2) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 50);
+    });
+    if ((mongoose.connection.readyState as any) === 1) {
+      return mongoose.connection;
+    }
+  }
+
   const cleanedURI = getCleanedURI(MONGODB_URI);
 
   if (!cleanedURI) {
