@@ -120,51 +120,22 @@ const PORT = 3000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Force restore Vercel stripped '/api' prefix so all routes match correctly.
+app.use((req, res, next) => {
+  if (req.url && !req.url.startsWith('/api') && !req.url.startsWith('/_')) {
+    req.url = '/api' + (req.url.startsWith('/') ? '' : '/') + req.url;
+  }
+  next();
+});
+
 app.use('/api', async (req, res, next) => {
   try {
     await connectDB();
     next();
-  } catch (err: any) {
+  } catch (err) {
     console.error('[Middleware] Database connection error:', err);
     res.status(500).json({ success: false, error: 'Database connection failed: ' + err.message });
   }
-});
-
-
-// Middleware to handle Vercel routing path mismatches and ensure correct req.url for API requests only
-app.use((req, res, next) => {
-  const forwardedUrl = (req.headers['x-forwarded-url'] as string) || (req.headers['x-original-url'] as string);
-  const vercelForwardedPath = (req.headers['x-vercel-forwarded-path'] as string) || (req.headers['x-forwarded-path'] as string);
-  
-  // Try to determine the original requested path from the client
-  let originalPath = req.url.split('?')[0];
-  if (vercelForwardedPath) {
-    originalPath = vercelForwardedPath.split('?')[0];
-  } else if (forwardedUrl) {
-    try {
-      const parsedUrl = new URL(forwardedUrl, `http://${req.headers.host || 'localhost'}`);
-      originalPath = parsedUrl.pathname;
-    } catch (e) {
-      if (forwardedUrl.startsWith('/')) {
-        originalPath = forwardedUrl.split('?')[0];
-      }
-    }
-  }
-
-  if (originalPath.startsWith('/api')) {
-    console.log(`[Vercel Route Debug] Incoming API: ${req.method} ${req.url} | originalPath: ${originalPath}`);
-  }
-
-  // Only rewrite req.url if the original request was indeed intended for the API
-  if (originalPath.startsWith('/api')) {
-    if (req.url.split('?')[0] !== originalPath) {
-      const queryPart = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
-      req.url = originalPath + queryPart;
-      console.log(`[Vercel Route Fix] Restored API path: "${originalPath}" -> "${req.url}"`);
-    }
-  }
-
-  next();
 });
 
 // Lazy-initialization of GoogleGenAI
