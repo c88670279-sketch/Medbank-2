@@ -3,7 +3,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
 import { GoogleGenAI, Type } from '@google/genai';
-import { connectDB, UserModel, SubjectModel, ChapterModel, NoteModel, PdfModel, QuestionModel, TestModel, TestResultModel, AnnouncementModel, FlashcardModel, VideoModel, TopicModel, TrashModel } from './src/db/mongoose';
+import { connectDB, UserModel, SubjectModel, ChapterModel, NoteModel, PdfModel, QuestionModel, TestModel, TestResultModel, AnnouncementModel, FlashcardModel, VideoModel, TopicModel, TrashModel } from './src/db/mongoose.js';
 import mongoose from 'mongoose';
 
 dotenv.config();
