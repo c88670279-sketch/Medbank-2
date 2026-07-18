@@ -120,10 +120,56 @@ const PORT = 3000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Force restore Vercel stripped '/api' prefix so all routes match correctly.
+// Middleware to handle Vercel routing path mismatches and ensure correct req.url for API requests only
 app.use((req, res, next) => {
-  if (req.url && !req.url.startsWith('/api') && !req.url.startsWith('/_')) {
-    req.url = '/api' + (req.url.startsWith('/') ? '' : '/') + req.url;
+  const forwardedUrl = (req.headers['x-forwarded-url'] as string) || (req.headers['x-original-url'] as string);
+  const vercelForwardedPath = (req.headers['x-vercel-forwarded-path'] as string) || (req.headers['x-forwarded-path'] as string);
+  
+  // Try to determine the original requested path from the client
+  let originalPath = req.url.split('?')[0];
+  if (vercelForwardedPath) {
+    originalPath = vercelForwardedPath.split('?')[0];
+  } else if (forwardedUrl) {
+    try {
+      const parsedUrl = new URL(forwardedUrl, `http://${req.headers.host || 'localhost'}`);
+      originalPath = parsedUrl.pathname;
+    } catch (e) {
+      if (forwardedUrl.startsWith('/')) {
+        originalPath = forwardedUrl.split('?')[0];
+      }
+    }
+  }
+
+  // Rewrite req.url if original path starts with /api
+  if (originalPath.startsWith('/api')) {
+    if (req.url.split('?')[0] !== originalPath) {
+      const queryPart = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+      req.url = originalPath + queryPart;
+      console.log(`[Vercel Route Fix] Restored API path from headers: "${originalPath}" -> "${req.url}"`);
+    }
+  } else if (req.url && !req.url.startsWith('/api') && !req.url.startsWith('/_')) {
+    // Fallback if no Vercel headers are present, but path represents an API route (e.g., /auth/login, /subjects, etc.)
+    const isApiSubpath = req.url.startsWith('/auth/') || 
+                         req.url.startsWith('/subjects') || 
+                         req.url.startsWith('/questions') || 
+                         req.url.startsWith('/chapters') ||
+                         req.url.startsWith('/topics') ||
+                         req.url.startsWith('/pdfs') ||
+                         req.url.startsWith('/notes') ||
+                         req.url.startsWith('/tests') ||
+                         req.url.startsWith('/testResults') ||
+                         req.url.startsWith('/announcements') ||
+                         req.url.startsWith('/flashcards') ||
+                         req.url.startsWith('/videos') ||
+                         req.url.startsWith('/users') ||
+                         req.url.startsWith('/gemini/') ||
+                         req.url.startsWith('/test-db');
+                         
+    if (isApiSubpath) {
+      const oldUrl = req.url;
+      req.url = '/api' + (req.url.startsWith('/') ? '' : '/') + req.url;
+      console.log(`[Vercel Route Fix] Restored API path from patterns: "${oldUrl}" -> "${req.url}"`);
+    }
   }
   next();
 });
