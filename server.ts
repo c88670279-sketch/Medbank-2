@@ -140,7 +140,9 @@ app.use((req, res, next) => {
     }
   }
 
-  console.log(`[Vercel Route Debug] Incoming: ${req.method} ${req.url} | originalPath: ${originalPath}`);
+  if (originalPath.startsWith('/api')) {
+    console.log(`[Vercel Route Debug] Incoming API: ${req.method} ${req.url} | originalPath: ${originalPath}`);
+  }
 
   // Only rewrite req.url if the original request was indeed intended for the API
   if (originalPath.startsWith('/api')) {
