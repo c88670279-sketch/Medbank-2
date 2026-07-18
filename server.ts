@@ -120,6 +120,17 @@ const PORT = 3000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+app.use('/api', async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err: any) {
+    console.error('[Middleware] Database connection error:', err);
+    res.status(500).json({ success: false, error: 'Database connection failed: ' + err.message });
+  }
+});
+
+
 // Middleware to handle Vercel routing path mismatches and ensure correct req.url for API requests only
 app.use((req, res, next) => {
   const forwardedUrl = (req.headers['x-forwarded-url'] as string) || (req.headers['x-original-url'] as string);
