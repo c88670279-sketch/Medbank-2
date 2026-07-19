@@ -436,9 +436,17 @@ export default function TestSystem({ questions, testTitle, onFinishQuiz }: TestS
           <h3 className="text-sm sm:text-base font-bold text-slate-950 dark:text-white leading-relaxed whitespace-pre-wrap">
             {activeQuestion.question}
           </h3>
-          {activeQuestion.image && (
+          {activeQuestion.images && Array.isArray(activeQuestion.images) && activeQuestion.images.length > 0 ? (
+            <div className="flex flex-col gap-3 my-4">
+              {activeQuestion.images.map((imgUrl, idx) => (
+                <div key={idx} className="max-w-full sm:max-w-md rounded-lg overflow-hidden border border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-black flex justify-center">
+                  <img src={imgUrl} alt={`clue-${idx}`} className="object-contain max-h-[400px] w-full" referrerPolicy="no-referrer" />
+                </div>
+              ))}
+            </div>
+          ) : activeQuestion.image && (
             <div className="my-4 max-w-full sm:max-w-md rounded-lg overflow-hidden border border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-black flex justify-center">
-              <img src={activeQuestion.image} alt="clue" className="object-contain max-h-[400px] w-full" />
+              <img src={activeQuestion.image} alt="clue" className="object-contain max-h-[400px] w-full" referrerPolicy="no-referrer" />
             </div>
           )}
         </div>

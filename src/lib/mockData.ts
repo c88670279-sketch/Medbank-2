@@ -1,6 +1,25 @@
 import { MCQ, Chapter, Topic, PDFNote, RecentActivity, UserStats, SubjectName, TestAttempt } from '../types';
 import { saveDBNote, saveDBQuestion, deleteDBQuestion, saveDBTestResult, saveDBUser } from './api';
 import { safeStorage } from './safeStorage';
+import { GUYTON_PHYSIOLOGY_DATA } from './guytonPhysiology';
+
+const mappedGuytonChapters: Chapter[] = GUYTON_PHYSIOLOGY_DATA.map(ch => ({
+  id: `phys-guyton-c${ch.chapterNum}`,
+  name: ch.name,
+  subject: 'Physiology',
+  section: ch.section,
+  description: ch.description
+}));
+
+const mappedGuytonTopics: Topic[] = GUYTON_PHYSIOLOGY_DATA.flatMap((ch) =>
+  ch.topics.map((t, idx) => ({
+    id: `phys-guyton-t-${ch.chapterNum}-${idx}`,
+    name: t,
+    chapterId: `phys-guyton-c${ch.chapterNum}`,
+    subject: 'Physiology',
+    description: `Core concepts and detailed review of ${t}`
+  }))
+);
 
 // Chapters Mapping
 export const MOCK_CHAPTERS: Chapter[] = [
@@ -11,16 +30,102 @@ export const MOCK_CHAPTERS: Chapter[] = [
   { id: 'path-c4', name: 'Anemia & Hematology', subject: 'Pathology', description: 'Microcytic, macrocytic, hemolytic anemias, and leukemia classifications.' },
 
   // Pharmacology
-  { id: 'pharm-c1', name: 'General Pharmacology', subject: 'Pharmacology', description: 'Pharmacokinetics (absorption, distribution, metabolism, excretion) and pharmacodynamics.' },
-  { id: 'pharm-c2', name: 'Autonomic Nervous System', subject: 'Pharmacology', description: 'Cholinergic, anticholinergic, adrenergic, and antiadrenergic drugs.' },
-  { id: 'pharm-c3', name: 'Cardiovascular Drugs', subject: 'Pharmacology', description: 'Antihypertensives, antiarrhythmics, drugs for heart failure and angina.' },
-  { id: 'pharm-c4', name: 'Antimicrobials', subject: 'Pharmacology', description: 'Penicillins, cephalosporins, aminoglycosides, macrolides, and fluoroquinolones.' },
+  { id: 'phar-sec1-c1', name: 'Introduction, Routes of Drug Administration', subject: 'Pharmacology', section: 'Section 1: General Pharmacological Principles', description: 'Overview of pharmacology, history, drug nomenclature, and various routes of drug administration.' },
+  { id: 'phar-sec1-c2', name: 'Membrane Transport, Absorption and Distribution of Drugs', subject: 'Pharmacology', section: 'Section 1: General Pharmacological Principles', description: 'Mechanisms of drug transport across biological membranes, absorption kinetics, bioavailability, and drug distribution.' },
+  { id: 'phar-sec1-c3', name: 'Metabolism and Excretion of Drugs, Kinetics of Elimination', subject: 'Pharmacology', section: 'Section 1: General Pharmacological Principles', description: 'Biotransformation pathways, microsomal enzymes, renal and non-renal excretion, and clearance kinetics.' },
+  { id: 'phar-sec1-c4', name: 'Mechanism of Drug Action; Receptor Pharmacology', subject: 'Pharmacology', section: 'Section 1: General Pharmacological Principles', description: 'Receptor families, signal transduction, dose-response relationships, agonists, antagonists, and therapeutic index.' },
+  { id: 'phar-sec1-c5', name: 'Aspects of Pharmacotherapy, Clinical Pharmacology and Drug Development', subject: 'Pharmacology', section: 'Section 1: General Pharmacological Principles', description: 'Clinical trials, drug regulation, orphan drugs, essential medicine list, and rational prescribing.' },
+  { id: 'phar-sec1-c6', name: 'Adverse Drug Effects', subject: 'Pharmacology', section: 'Section 1: General Pharmacological Principles', description: 'Classification of adverse drug reactions, side effects, toxicities, drug allergies, and pharmacovigilance.' },
+
+  { id: 'phar-sec2-c1', name: 'Cholinergic Transmission and Cholinergic Drugs', subject: 'Pharmacology', section: 'Section 2: Drugs Acting on Autonomic Nervous System', description: 'Synthesis, storage, and release of acetylcholine; cholinomimetics and anticholinesterases.' },
+  { id: 'phar-sec2-c2', name: 'Anticholinergic Drugs and Drugs Acting on Autonomic Ganglia', subject: 'Pharmacology', section: 'Section 2: Drugs Acting on Autonomic Nervous System', description: 'Atropine and its congeners, ganglionic stimulants, and ganglionic blockers.' },
+  { id: 'phar-sec2-c3', name: 'Adrenergic Transmission and Adrenergic Drugs', subject: 'Pharmacology', section: 'Section 2: Drugs Acting on Autonomic Nervous System', description: 'Synthesis and reuptake of catecholamines; sympathomimetics, alpha and beta receptor agonists.' },
+  { id: 'phar-sec2-c4', name: 'Antiadrenergic Drugs (Adrenergic Receptor Antagonists) and Drugs for Glaucoma', subject: 'Pharmacology', section: 'Section 2: Drugs Acting on Autonomic Nervous System', description: 'Alpha and beta blockers, clinical pharmacology, and medical management of glaucoma.' },
+
+  { id: 'phar-sec3-c1', name: 'Histamine and Antihistaminics', subject: 'Pharmacology', section: 'Section 3: Autacoids and Related Drugs', description: 'Physiological roles of histamine, H1 and H2 receptor antagonists, and their clinical uses.' },
+  { id: 'phar-sec3-c2', name: '5-Hydroxytryptamine, its Antagonists and Drug Therapy of Migraine', subject: 'Pharmacology', section: 'Section 3: Autacoids and Related Drugs', description: 'Serotonergic pathways, agonists, antagonists, and acute & prophylactic management of migraine.' },
+  { id: 'phar-sec3-c3', name: 'Prostaglandins, Leukotrienes (Eicosanoids) and Platelet Activating Factor', subject: 'Pharmacology', section: 'Section 3: Autacoids and Related Drugs', description: 'Biosynthesis of eicosanoids, physiological effects, and clinical applications of prostaglandins.' },
+  { id: 'phar-sec3-c4', name: 'Nonsteroidal Antiinflammatory Drugs and Antipyretic-Analgesics', subject: 'Pharmacology', section: 'Section 3: Autacoids and Related Drugs', description: 'Mechanism of action of COX inhibitors, aspirin, paracetamol, selective COX-2 inhibitors, and NSAID toxicities.' },
+  { id: 'phar-sec3-c5', name: 'Antirheumatoid and Antigout Drugs', subject: 'Pharmacology', section: 'Section 3: Autacoids and Related Drugs', description: 'Disease-modifying antirheumatic drugs (DMARDs), treatment of acute and chronic gout.' },
+
+  { id: 'phar-sec4-c1', name: 'Drugs for Cough and Bronchial Asthma', subject: 'Pharmacology', section: 'Section 4: Respiratory System Drugs', description: 'Antitussives, expectorants, bronchodilators, inhaled corticosteroids, and leukotriene antagonists.' },
+
+  { id: 'phar-sec5-c1', name: 'Anterior Pituitary Hormones', subject: 'Pharmacology', section: 'Section 5: Hormones and Related Drugs', description: 'Growth hormone, prolactin, gonadotropins, and their hypothalamic releasing/inhibiting factors.' },
+  { id: 'phar-sec5-c2', name: 'Thyroid Hormones and Thyroid Inhibitors', subject: 'Pharmacology', section: 'Section 5: Hormones and Related Drugs', description: 'Thyroxine synthesis, replacement therapy, antithyroid drugs, and radioiodine.' },
+  { id: 'phar-sec5-c3', name: 'Insulin, Oral Antidiabetic Drugs and Glucagon', subject: 'Pharmacology', section: 'Section 5: Hormones and Related Drugs', description: 'Insulin regimens, sulfonylureas, biguanides, SGLT2 inhibitors, GLP-1 agonists, and management of diabetes mellitus.' },
+  { id: 'phar-sec5-c4', name: 'Corticosteroids', subject: 'Pharmacology', section: 'Section 5: Hormones and Related Drugs', description: 'Glucocorticoids, mineralocorticoids, physiological actions, therapeutic uses, and adverse effects.' },
+  { id: 'phar-sec5-c5', name: 'Androgens and Related Drugs, Drugs for Erectile Dysfunction', subject: 'Pharmacology', section: 'Section 5: Hormones and Related Drugs', description: 'Testosterone, anabolic steroids, antiandrogens, and PDE-5 inhibitors.' },
+  { id: 'phar-sec5-c6', name: 'Estrogens, Progestins and Contraceptives', subject: 'Pharmacology', section: 'Section 5: Hormones and Related Drugs', description: 'Hormonal replacement therapy, oral contraceptives, injectable contraceptives, and selective estrogen receptor modulators.' },
+  { id: 'phar-sec5-c7', name: 'Oxytocin and Other Drugs Acting on Uterus', subject: 'Pharmacology', section: 'Section 5: Hormones and Related Drugs', description: 'Uterine stimulants (oxytocin, ergot alkaloids) and uterine relaxants (tocolytics).' },
+  { id: 'phar-sec5-c8', name: 'Hormones and Drugs Affecting Calcium Balance', subject: 'Pharmacology', section: 'Section 5: Hormones and Related Drugs', description: 'Parathyroid hormone, calcitonin, Vitamin D, bisphosphonates, and management of osteoporosis.' },
+
+  { id: 'phar-sec6-c1', name: 'Skeletal Muscle Relaxants', subject: 'Pharmacology', section: 'Section 6: Drugs Acting on Peripheral (Somatic) Nervous System', description: 'Neuromuscular blockers, depolarizing and non-depolarizing agents, and spasmolytics.' },
+  { id: 'phar-sec6-c2', name: 'Local Anaesthetics', subject: 'Pharmacology', section: 'Section 6: Drugs Acting on Peripheral (Somatic) Nervous System', description: 'Mechanism of local anesthetic action, lidocaine, bupivacaine, and addition of adrenaline.' },
+
+  { id: 'phar-sec7-c1', name: 'General Anaesthetics', subject: 'Pharmacology', section: 'Section 7: Drugs Acting on Central Nervous System', description: 'Inhalational and intravenous anesthetics, stages of anesthesia, and preanesthetic medication.' },
+  { id: 'phar-sec7-c2', name: 'Ethyl and Methyl Alcohols', subject: 'Pharmacology', section: 'Section 7: Drugs Acting on Central Nervous System', description: 'Pharmacology of ethanol, acute and chronic alcoholism, disulfiram, and treatment of methanol poisoning.' },
+  { id: 'phar-sec7-c3', name: 'Sedative-Hypnotics', subject: 'Pharmacology', section: 'Section 7: Drugs Acting on Central Nervous System', description: 'Barbiturates, benzodiazepines, non-benzodiazepine hypnotics (Z-drugs), and flumazenil.' },
+  { id: 'phar-sec7-c4', name: 'Antiepileptic Drugs', subject: 'Pharmacology', section: 'Section 7: Drugs Acting on Central Nervous System', description: 'Mechanisms of seizure control, phenytoin, valproate, carbamazepine, newer anticonvulsants, and status epilepticus.' },
+  { id: 'phar-sec7-c5', name: 'Antiparkinsonian Drugs', subject: 'Pharmacology', section: 'Section 7: Drugs Acting on Central Nervous System', description: 'Levodopa-carbidopa, dopamine agonists, MAO-B inhibitors, COMT inhibitors, and anticholinergic agents.' },
+  { id: 'phar-sec7-c6', name: 'Drugs Used in Mental Illness: Antipsychotic and Antimanic Drugs', subject: 'Pharmacology', section: 'Section 7: Drugs Acting on Central Nervous System', description: 'Typical and atypical antipsychotics, lithium, and mood stabilizers.' },
+  { id: 'phar-sec7-c7', name: 'Drugs Used in Mental Illness: Antidepressant and Antianxiety Drugs', subject: 'Pharmacology', section: 'Section 7: Drugs Acting on Central Nervous System', description: 'SSRIs, SNRIs, TCAs, MAOIs, and benzodiazepines used for anxiety.' },
+  { id: 'phar-sec7-c8', name: 'Opioid Analgesics and Antagonists', subject: 'Pharmacology', section: 'Section 7: Drugs Acting on Central Nervous System', description: 'Morphine, fentanyl, opioid receptors, endogenous peptides, and naloxone/naltrexone.' },
+  { id: 'phar-sec7-c9', name: 'CNS Stimulants and Cognition Enhancers', subject: 'Pharmacology', section: 'Section 7: Drugs Acting on Central Nervous System', description: 'Amphetamines, methylphenidate, nootropics, and drugs for Alzheimer\'s disease.' },
+
+  { id: 'phar-sec8-c1', name: 'Drugs Affecting Renin-Angiotensin System', subject: 'Pharmacology', section: 'Section 8: Cardiovascular Drugs', description: 'ACE inhibitors, Angiotensin Receptor Blockers (ARBs), and direct renin inhibitors.' },
+  { id: 'phar-sec8-c2', name: 'Nitric Oxide and Vasoactive Peptide Signal Molecules', subject: 'Pharmacology', section: 'Section 8: Cardiovascular Drugs', description: 'Endogenous nitric oxide, donors, endothelin antagonists, and vasoactive peptides.' },
+  { id: 'phar-sec8-c3', name: 'Cardiac Glycosides and Drugs for Heart Failure', subject: 'Pharmacology', section: 'Section 8: Cardiovascular Drugs', description: 'Digoxin, beta-blockers, aldosterone antagonists, and newer drugs like ARNIs.' },
+  { id: 'phar-sec8-c4', name: 'Antiarrhythmic Drugs', subject: 'Pharmacology', section: 'Section 8: Cardiovascular Drugs', description: 'Vaughan Williams classification (Class I-IV) and management of arrhythmias.' },
+  { id: 'phar-sec8-c5', name: 'Antianginal and Other Anti-ischaemic Drugs', subject: 'Pharmacology', section: 'Section 8: Cardiovascular Drugs', description: 'Organic nitrates, calcium channel blockers, beta-blockers, and metabolic modulators (ranolazine).' },
+  { id: 'phar-sec8-c6', name: 'Antihypertensive Drugs', subject: 'Pharmacology', section: 'Section 8: Cardiovascular Drugs', description: 'First-line drugs, step-care therapy, and management of hypertensive emergencies.' },
+
+  { id: 'phar-sec9-c1', name: 'Diuretics', subject: 'Pharmacology', section: 'Section 9: Drugs Acting on Kidney', description: 'Loop diuretics, thiazides, potassium-sparing diuretics, carbonic anhydrase inhibitors, and osmotic diuretics.' },
+  { id: 'phar-sec9-c2', name: 'Antidiuretics', subject: 'Pharmacology', section: 'Section 9: Drugs Acting on Kidney', description: 'Vasopressin, desmopressin, and treatment of diabetes insipidus.' },
+
+  { id: 'phar-sec10-c1', name: 'Haematinics and Erythropoietin', subject: 'Pharmacology', section: 'Section 10: Drugs Affecting Blood and Blood Formation', description: 'Iron, Vitamin B12, folic acid formulations, and erythropoiesis-stimulating agents.' },
+  { id: 'phar-sec10-c2', name: 'Drugs Affecting Coagulation, Bleeding and Thrombosis', subject: 'Pharmacology', section: 'Section 10: Drugs Affecting Blood and Blood Formation', description: 'Anticoagulants (heparin, warfarin, DOACs), antiplatelets, fibrinolytics, and antifibrinolytics.' },
+  { id: 'phar-sec10-c3', name: 'Hypolipidaemic Drugs', subject: 'Pharmacology', section: 'Section 10: Drugs Affecting Blood and Blood Formation', description: 'Statins, fibrates, ezetimibe, PCSK9 inhibitors, and bile acid sequestrants.' },
+
+  { id: 'phar-sec11-c1', name: 'Drugs for Peptic Ulcer and Gastroesophageal Reflux Disease', subject: 'Pharmacology', section: 'Section 11: Gastrointestinal Drugs', description: 'H2 blockers, PPIs, mucosal protectants, antacids, and H. pylori eradication regimens.' },
+  { id: 'phar-sec11-c2', name: 'Antiemetic, Prokinetic and Digestant Drugs', subject: 'Pharmacology', section: 'Section 11: Gastrointestinal Drugs', description: 'D2 antagonists, 5-HT3 antagonists, NK1 antagonists, prokinetics, and pancreatic enzymes.' },
+  { id: 'phar-sec11-c3', name: 'Drugs for Constipation and Diarrhoea', subject: 'Pharmacology', section: 'Section 11: Gastrointestinal Drugs', description: 'Laxatives, purgatives, oral rehydration salts (ORS), loperamide, and racecadotril.' },
+
+  { id: 'phar-sec12-c1', name: 'Antimicrobial Drugs: General Considerations', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'Classification, mechanism of action, bacterial resistance, and general principles of chemotherapy.' },
+  { id: 'phar-sec12-c2', name: 'Sulfonamides, Cotrimoxazole and Quinolones', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'Folate antagonists, fluoroquinolones, and their therapeutic applications.' },
+  { id: 'phar-sec12-c3', name: 'Beta-Lactam Antibiotics', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'Penicillins, cephalosporins, monobactams, carbapenems, and beta-lactamase inhibitors.' },
+  { id: 'phar-sec12-c4', name: 'Tetracyclines and Chloramphenicol (Broad-Spectrum Antibiotics)', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'Mechanism of action, spectrum, and notable adverse effects (teeth discoloration, gray baby syndrome).' },
+  { id: 'phar-sec12-c5', name: 'Aminoglycoside Antibiotics', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'Gentamicin, amikacin, streptomycin, ototoxicity, and nephrotoxicity.' },
+  { id: 'phar-sec12-c6', name: 'Macrolide, Lincosamide, Glycopeptide and Other Antibacterial Antibiotics; Urinary Antiseptics', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'Erythromycin, azithromycin, clindamycin, vancomycin, linezolid, and nitrofurantoin.' },
+  { id: 'phar-sec12-c7', name: 'Antitubercular Drugs', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'First-line (HRZES) and second-line anti-TB drugs, and MDR/XDR-TB treatment regimens.' },
+  { id: 'phar-sec12-c8', name: 'Antileprotic Drugs', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'Dapsone, clofazimine, rifampicin, and WHO multi-drug therapy (MDT) for leprosy.' },
+  { id: 'phar-sec12-c9', name: 'Antifungal Drugs', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'Amphotericin B, azoles, echinocandins, terbinafine, and superficial vs systemic mycoses.' },
+  { id: 'phar-sec12-c10', name: 'Antiviral Drugs (Non-retroviral)', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'Acyclovir, ganciclovir, oseltamivir, and drugs for chronic hepatitis B and C.' },
+  { id: 'phar-sec12-c11', name: 'Antiviral Drugs (Anti-retrovirus)', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'NRTIs, NNRTIs, protease inhibitors, integrase inhibitors, and HAART regimens.' },
+  { id: 'phar-sec12-c12', name: 'Antimalarial Drugs', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'Chloroquine, artemisinin derivatives, quinine, primaquine, and prophylaxis regimens.' },
+  { id: 'phar-sec12-c13', name: 'Antiamoebic and Other Antiprotozoal Drugs', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'Metronidazole, tinidazole, and treatment of giardiasis, trichomoniasis, and toxoplasmosis.' },
+  { id: 'phar-sec12-c14', name: 'Anthelmintic Drugs', subject: 'Pharmacology', section: 'Section 12: Antimicrobial Drugs', description: 'Albendazole, mebendazole, ivermectin, praziquantel, and diethylcarbamazine (DEC).' },
+
+  { id: 'phar-sec13-c1', name: 'Anticancer Drugs', subject: 'Pharmacology', section: 'Section 13: Chemotherapy of Neoplastic Diseases', description: 'Alkylating agents, antimetabolites, plant alkaloids, targeted therapies, immunotherapy, and cancer toxicities.' },
+
+  { id: 'phar-sec14-c1', name: 'Immunosuppressant Drugs', subject: 'Pharmacology', section: 'Section 14: Miscellaneous Drugs', description: 'Cyclosporine, tacrolimus, azathioprine, mycophenolate mofetil, and monoclonal antibodies.' },
+  { id: 'phar-sec14-c2', name: 'Drugs Acting on Skin and Mucous Membranes', subject: 'Pharmacology', section: 'Section 14: Miscellaneous Drugs', description: 'Topical steroids, retinoids, emollients, and melanizing agents.' },
+  { id: 'phar-sec14-c3', name: 'Antiseptics, Disinfectants and Ectoparasiticides', subject: 'Pharmacology', section: 'Section 14: Miscellaneous Drugs', description: 'Phenols, halogens, alcohols, aldehydes, and scabicides/pediculicides.' },
+  { id: 'phar-sec14-c4', name: 'Chelating Agents', subject: 'Pharmacology', section: 'Section 14: Miscellaneous Drugs', description: 'BAL, EDTA, penicillamine, desferrioxamine, and treatment of heavy metal poisoning.' },
+  { id: 'phar-sec14-c5', name: 'Vitamins', subject: 'Pharmacology', section: 'Section 14: Miscellaneous Drugs', description: 'Water-soluble and fat-soluble vitamins, therapeutic indications, and hypervitaminosis.' },
+  { id: 'phar-sec14-c6', name: 'Vaccines, Antisera and Immunoglobulins', subject: 'Pharmacology', section: 'Section 14: Miscellaneous Drugs', description: 'Active and passive immunization, types of vaccines, and cold chain.' },
+  { id: 'phar-sec14-c7', name: 'Drug Interactions', subject: 'Pharmacology', section: 'Section 14: Miscellaneous Drugs', description: 'Pharmacokinetic and pharmacodynamic drug interactions with high-yield clinical examples.' },
+
+  { id: 'phar-app-c1', name: 'Appendix 1: Solution to Problem Directed Study', subject: 'Pharmacology', section: 'Appendices', description: 'Analytical studies, case scenarios, and clinical problem-solving guides.' },
+  { id: 'phar-app-c2', name: 'Appendix 2: Prescribing in Pregnancy', subject: 'Pharmacology', section: 'Appendices', description: 'FDA pregnancy categories, teratogenic drugs, and safe alternatives during gestation.' },
+  { id: 'phar-app-c3', name: 'Drugs in Breastfeeding', subject: 'Pharmacology', section: 'Appendices', description: 'Excretion of drugs in breast milk, safety profiles, and infant risk assessments.' },
+  { id: 'phar-app-c4', name: 'Drugs and Fixed Dose Combinations Banned in India', subject: 'Pharmacology', section: 'Appendices', description: 'Banned formulations, irrational drug combinations, and regulatory directives in India.' },
 
   // Microbiology
   { id: 'micro-c1', name: 'General Bacteriology', subject: 'Microbiology', description: 'Bacterial cell structure, growth, nutrition, and disinfection.' },
   { id: 'micro-c2', name: 'Immunology', subject: 'Microbiology', description: 'Antigens, antibodies, hypersensitivity reactions, and autoimmune disorders.' },
   { id: 'micro-c3', name: 'Systemic Bacteriology', subject: 'Microbiology', description: 'Staphylococci, Streptococci, Enterobacteriaceae, and Mycobacteria.' },
-  { id: 'micro-c4', name: 'Virology', subject: 'Microbiology', description: 'DNA viruses, RNA viruses, HIV, hepatitis, and antiviral defenses.' }
+  { id: 'micro-c4', name: 'Virology', subject: 'Microbiology', description: 'DNA viruses, RNA viruses, HIV, hepatitis, and antiviral defenses.' },
+  ...mappedGuytonChapters
 ];
 
 // Topics Mapping
@@ -35,17 +140,18 @@ export const MOCK_TOPICS: Topic[] = [
   { id: 'path-t5', name: 'Tumor Suppressor Genes', chapterId: 'path-c3', subject: 'Pathology', description: 'TP53, RB1, BRCA1/2, and APC genes in cancer.' },
 
   // Pharmacology - General
-  { id: 'pharm-t1', name: 'Bioavailability & Half-life', chapterId: 'pharm-c1', subject: 'Pharmacology', description: 'Factors influencing plasma concentration-time curves.' },
-  { id: 'pharm-t2', name: 'Receptor Signaling Mechanisms', chapterId: 'pharm-c1', subject: 'Pharmacology', description: 'G-proteins, ion channels, enzyme-linked receptors.' },
+  { id: 'pharm-t1', name: 'Bioavailability & Half-life', chapterId: 'phar-sec1-c2', subject: 'Pharmacology', description: 'Factors influencing plasma concentration-time curves.' },
+  { id: 'pharm-t2', name: 'Receptor Signaling Mechanisms', chapterId: 'phar-sec1-c4', subject: 'Pharmacology', description: 'G-proteins, ion channels, enzyme-linked receptors.' },
   // Pharmacology - ANS
-  { id: 'pharm-t3', name: 'Adrenergic Agonists', chapterId: 'pharm-c2', subject: 'Pharmacology', description: 'Epinephrine, Norepinephrine, Dopamine, and selective agonists.' },
-  { id: 'pharm-t4', name: 'Beta Blockers', chapterId: 'pharm-c2', subject: 'Pharmacology', description: 'Propranolol, Atenolol, Metoprolol, and their clinical uses.' },
+  { id: 'pharm-t3', name: 'Adrenergic Agonists', chapterId: 'phar-sec2-c3', subject: 'Pharmacology', description: 'Epinephrine, Norepinephrine, Dopamine, and selective agonists.' },
+  { id: 'pharm-t4', name: 'Beta Blockers', chapterId: 'phar-sec2-c4', subject: 'Pharmacology', description: 'Propranolol, Atenolol, Metoprolol, and their clinical uses.' },
 
   // Microbiology - General
   { id: 'micro-t1', name: 'Gram Staining & Cell Wall', chapterId: 'micro-c1', subject: 'Microbiology', description: 'Differences in Gram-positive and Gram-negative envelope structures.' },
   { id: 'micro-t2', name: 'Sterilization Methods', chapterId: 'micro-c1', subject: 'Microbiology', description: 'Autoclave parameters, dry heat, radiation, and chemical disinfectants.' },
   // Microbiology - Immunology
-  { id: 'micro-t3', name: 'Hypersensitivity Reactions', chapterId: 'micro-c2', subject: 'Microbiology', description: 'Types I, II, III, and IV hypersensitivity with clinical correlations.' }
+  { id: 'micro-t3', name: 'Hypersensitivity Reactions', chapterId: 'micro-c2', subject: 'Microbiology', description: 'Types I, II, III, and IV hypersensitivity with clinical correlations.' },
+  ...mappedGuytonTopics
 ];
 
 // PDF notes
@@ -78,7 +184,7 @@ export const MOCK_PDF_NOTES: PDFNote[] = [
     id: 'pdf-3',
     title: 'KDT Pharmacology - Autonomic Drugs Flowcharts',
     subject: 'Pharmacology',
-    chapter: 'Autonomic Nervous System',
+    chapter: 'Adrenergic Transmission and Adrenergic Drugs',
     topic: 'Adrenergic Agonists',
     sourceBook: 'KDT (Tripathi)',
     fileSize: '6.8 MB',
@@ -152,7 +258,7 @@ export const MOCK_MCQS: MCQ[] = [
     correctAnswer: 2,
     explanation: 'Assertion is true (Phenoxybenzamine is used pre-operatively). However, the reason is false because Phenoxybenzamine is an IRREVERSIBLE (non-competitive) covalent alpha-blocker, not a competitive one.',
     subject: 'Pharmacology',
-    chapter: 'Autonomic Nervous System',
+    chapter: 'Antiadrenergic Drugs (Adrenergic Receptor Antagonists) and Drugs for Glaucoma',
     topic: 'Adrenergic Agonists',
     difficulty: 'Hard',
     sourceBook: 'KDT (Tripathi)',
@@ -171,7 +277,7 @@ export const MOCK_MCQS: MCQ[] = [
     correctAnswer: 1,
     explanation: 'This is a Type I anaphylactic hypersensitivity reaction. Intramuscular epinephrine (adrenaline) 1:1000 injected in the anterolateral thigh is the first-line lifesaving treatment to reverse bronchoconstriction and vasodilation.',
     subject: 'Pharmacology',
-    chapter: 'Autonomic Nervous System',
+    chapter: 'Adrenergic Transmission and Adrenergic Drugs',
     topic: 'Adrenergic Agonists',
     difficulty: 'Medium',
     sourceBook: 'KDT (Tripathi)',
@@ -247,7 +353,7 @@ export const MOCK_MCQS: MCQ[] = [
     correctAnswer: 1,
     explanation: 'Cyclophosphamide produces acrolein, a toxic metabolite excreted in urine that causes hemorrhagic cystitis. MESNA (2-mercaptoethane sulfonate) is administered to bind and neutralize acrolein in the bladder.',
     subject: 'Pharmacology',
-    chapter: 'Antimicrobials',
+    chapter: 'Anticancer Drugs',
     topic: 'Bioavailability & Half-life',
     difficulty: 'Hard',
     sourceBook: 'KDT (Tripathi)',

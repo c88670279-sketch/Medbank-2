@@ -945,6 +945,7 @@ export async function importMCQs(params: {
   topic?: string;
   sourceName?: string;
   questionTypes?: string[];
+  targetExam?: string;
 }): Promise<{ mcqs: any[]; duplicateSkippedCount: number; subjectVerification?: any }> {
   const cacheBuster = Date.now() + '-' + Math.random().toString(36).substring(2, 9);
   const response = await fetch(`/api/gemini/import-mcqs?t=${cacheBuster}`, {
@@ -975,6 +976,7 @@ export async function importPDFMCQs(params: {
   chapter?: string;
   topic?: string;
   sourceName?: string;
+  targetExam?: string;
 }): Promise<any[]> {
   const cacheBuster = Date.now() + '-' + Math.random().toString(36).substring(2, 9);
   const response = await fetch(`/api/gemini/import-pdf-mcqs?t=${cacheBuster}`, {

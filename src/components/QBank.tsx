@@ -3,30 +3,468 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, Bookmark, BookOpen, Target, ChevronDown, ChevronRight, 
   Check, X, Sparkles, Loader2, Play, AlertCircle, Folder, 
-  FolderOpen, FileText, Award, Layers, Flame, RefreshCw 
+  FolderOpen, FileText, Award, Layers, Flame, RefreshCw,
+  Image as ImageIcon, Brain, Stethoscope, ArrowRight,
+  Bone, Pill, Microscope, Dna, Users, Scale, Eye, Scissors, Baby, HeartPulse, Ear
 } from 'lucide-react';
 import { MCQ, SubjectName } from '../types';
 import { safeStorage } from '../lib/safeStorage';
-import { getAllMCQs, getBookmarks, toggleBookmark, getTestAttempts } from '../lib/mockData';
+import { getAllMCQs, getBookmarks, toggleBookmark, getTestAttempts, MOCK_CHAPTERS } from '../lib/mockData';
 import { explainAnswer, fetchDBQuestions, fetchDBSubjects, fetchDBChapters, fetchDBTopics, fetchDBQuestionCounts } from '../lib/api';
+
+const subjectConfigs: {
+  [key: string]: {
+    icon: React.ComponentType<any>;
+    colorClass: string;
+    badgeClass: string;
+    glowClass: string;
+    bgGradient: string;
+    description: string;
+    accentHex: string;
+    hoverText: string;
+    hoverBg: string;
+    hoverBorder: string;
+  }
+} = {
+  'Anatomy': {
+    icon: Bone,
+    colorClass: 'text-blue-500',
+    badgeClass: 'bg-blue-500/10 text-blue-500 dark:text-blue-400',
+    glowClass: 'hover:border-blue-500/50 hover:shadow-[0_0_20px_-3px_rgba(59,130,246,0.25)]',
+    bgGradient: 'from-blue-500/20 to-blue-600/5 dark:from-blue-500/15 dark:to-transparent',
+    description: 'Study of human structure, gross anatomy, osteology, and developmental biology.',
+    accentHex: '#3b82f6',
+    hoverText: 'group-hover:text-blue-500 dark:group-hover:text-blue-400',
+    hoverBg: 'group-hover:bg-blue-50/50 dark:group-hover:bg-blue-950/10',
+    hoverBorder: 'group-hover:border-blue-500/30 dark:group-hover:border-blue-400/20'
+  },
+  'Physiology': {
+    icon: HeartPulse,
+    colorClass: 'text-green-500',
+    badgeClass: 'bg-green-500/10 text-green-500 dark:text-green-400',
+    glowClass: 'hover:border-green-500/50 hover:shadow-[0_0_20px_-3px_rgba(34,197,94,0.25)]',
+    bgGradient: 'from-green-500/20 to-green-600/5 dark:from-green-500/15 dark:to-transparent',
+    description: 'Explore cell physiology, organ systems, biophysics, and homeostatic mechanisms.',
+    accentHex: '#22c55e',
+    hoverText: 'group-hover:text-green-500 dark:group-hover:text-green-400',
+    hoverBg: 'group-hover:bg-green-50/50 dark:group-hover:bg-green-950/10',
+    hoverBorder: 'group-hover:border-green-500/30 dark:group-hover:border-green-400/20'
+  },
+  'Biochemistry': {
+    icon: Dna,
+    colorClass: 'text-purple-500',
+    badgeClass: 'bg-purple-500/10 text-purple-500 dark:text-purple-400',
+    glowClass: 'hover:border-purple-500/50 hover:shadow-[0_0_20px_-3px_rgba(168,85,247,0.25)]',
+    bgGradient: 'from-purple-500/20 to-purple-600/5 dark:from-purple-500/15 dark:to-transparent',
+    description: 'Biomolecules, metabolic pathways, molecular genetics, and clinical chemistry.',
+    accentHex: '#a855f7',
+    hoverText: 'group-hover:text-purple-500 dark:group-hover:text-purple-400',
+    hoverBg: 'group-hover:bg-purple-50/50 dark:group-hover:bg-purple-950/10',
+    hoverBorder: 'group-hover:border-purple-500/30 dark:group-hover:border-purple-400/20'
+  },
+  'Pathology': {
+    icon: Brain,
+    colorClass: 'text-rose-500',
+    badgeClass: 'bg-rose-500/10 text-rose-500 dark:text-rose-400',
+    glowClass: 'hover:border-rose-500/50 hover:shadow-[0_0_20px_-3px_rgba(244,63,94,0.25)]',
+    bgGradient: 'from-rose-500/20 to-rose-600/5 dark:from-rose-500/15 dark:to-transparent',
+    description: 'General pathology, hematology, systemic pathology, and diagnostic cytopathology.',
+    accentHex: '#f43f5e',
+    hoverText: 'group-hover:text-rose-500 dark:group-hover:text-rose-400',
+    hoverBg: 'group-hover:bg-rose-50/50 dark:group-hover:bg-rose-950/10',
+    hoverBorder: 'group-hover:border-rose-500/30 dark:group-hover:border-rose-400/20'
+  },
+  'Pharmacology': {
+    icon: Pill,
+    colorClass: 'text-amber-500',
+    badgeClass: 'bg-amber-500/10 text-amber-500 dark:text-amber-400',
+    glowClass: 'hover:border-amber-500/50 hover:shadow-[0_0_20px_-3px_rgba(245,158,11,0.25)]',
+    bgGradient: 'from-amber-500/20 to-amber-600/5 dark:from-amber-500/15 dark:to-transparent',
+    description: 'Pharmacokinetics, pharmacodynamics, therapeutics, and drug interactions.',
+    accentHex: '#f59e0b',
+    hoverText: 'group-hover:text-amber-500 dark:group-hover:text-amber-400',
+    hoverBg: 'group-hover:bg-amber-50/50 dark:group-hover:bg-amber-950/10',
+    hoverBorder: 'group-hover:border-amber-500/30 dark:group-hover:border-amber-400/20'
+  },
+  'Microbiology': {
+    icon: Microscope,
+    colorClass: 'text-cyan-500',
+    badgeClass: 'bg-cyan-500/10 text-cyan-500 dark:text-cyan-400',
+    glowClass: 'hover:border-cyan-500/50 hover:shadow-[0_0_20px_-3px_rgba(6,182,212,0.25)]',
+    bgGradient: 'from-cyan-500/20 to-cyan-600/5 dark:from-cyan-500/15 dark:to-transparent',
+    description: 'Bacteriology, virology, mycology, parasitology, and immunology.',
+    accentHex: '#06b6d4',
+    hoverText: 'group-hover:text-cyan-500 dark:group-hover:text-cyan-400',
+    hoverBg: 'group-hover:bg-cyan-50/50 dark:group-hover:bg-cyan-950/10',
+    hoverBorder: 'group-hover:border-cyan-500/30 dark:group-hover:border-cyan-400/20'
+  },
+  'Community Medicine': {
+    icon: Users,
+    colorClass: 'text-emerald-500',
+    badgeClass: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400',
+    glowClass: 'hover:border-emerald-500/50 hover:shadow-[0_0_20px_-3px_rgba(16,185,129,0.25)]',
+    bgGradient: 'from-emerald-500/20 to-emerald-600/5 dark:from-emerald-500/15 dark:to-transparent',
+    description: 'Epidemiology, biostatistics, public health, and preventive medicine.',
+    accentHex: '#10b89d',
+    hoverText: 'group-hover:text-emerald-500 dark:group-hover:text-emerald-400',
+    hoverBg: 'group-hover:bg-emerald-50/50 dark:group-hover:bg-emerald-950/10',
+    hoverBorder: 'group-hover:border-emerald-500/30 dark:group-hover:border-emerald-400/20'
+  },
+  'Forensic Medicine': {
+    icon: Scale,
+    colorClass: 'text-indigo-500',
+    badgeClass: 'bg-indigo-500/10 text-indigo-500 dark:text-indigo-400',
+    glowClass: 'hover:border-indigo-500/50 hover:shadow-[0_0_20px_-3px_rgba(99,102,241,0.25)]',
+    bgGradient: 'from-indigo-500/20 to-indigo-600/5 dark:from-indigo-500/15 dark:to-transparent',
+    description: 'Medical jurisprudence, toxicology, forensic pathology, and legal procedures.',
+    accentHex: '#6366f1',
+    hoverText: 'group-hover:text-indigo-500 dark:group-hover:text-indigo-400',
+    hoverBg: 'group-hover:bg-indigo-50/50 dark:group-hover:bg-indigo-950/10',
+    hoverBorder: 'group-hover:border-indigo-500/30 dark:group-hover:border-indigo-400/20'
+  },
+  'Ophthalmology': {
+    icon: Eye,
+    colorClass: 'text-teal-500',
+    badgeClass: 'bg-teal-500/10 text-teal-500 dark:text-teal-400',
+    glowClass: 'hover:border-teal-500/50 hover:shadow-[0_0_20px_-3px_rgba(20,184,166,0.25)]',
+    bgGradient: 'from-teal-500/20 to-teal-600/5 dark:from-teal-500/15 dark:to-transparent',
+    description: 'Ocular diseases, refraction, ophthalmic surgery, and visual pathways.',
+    accentHex: '#14b8a6',
+    hoverText: 'group-hover:text-teal-500 dark:group-hover:text-teal-400',
+    hoverBg: 'group-hover:bg-teal-50/50 dark:group-hover:bg-teal-950/10',
+    hoverBorder: 'group-hover:border-teal-500/30 dark:group-hover:border-teal-400/20'
+  },
+  'ENT': {
+    icon: Ear,
+    colorClass: 'text-amber-600',
+    badgeClass: 'bg-amber-600/10 text-amber-600 dark:text-amber-400',
+    glowClass: 'hover:border-amber-600/50 hover:shadow-[0_0_20px_-3px_rgba(217,119,6,0.25)]',
+    bgGradient: 'from-amber-600/20 to-amber-700/5 dark:from-amber-600/15 dark:to-transparent',
+    description: 'Diseases of ear, nose, throat, and head & neck surgery.',
+    accentHex: '#d97706',
+    hoverText: 'group-hover:text-amber-600 dark:group-hover:text-amber-400',
+    hoverBg: 'group-hover:bg-amber-50/50 dark:group-hover:bg-amber-950/10',
+    hoverBorder: 'group-hover:border-amber-600/30 dark:group-hover:border-amber-400/20'
+  },
+  'Medicine': {
+    icon: Stethoscope,
+    colorClass: 'text-sky-500',
+    badgeClass: 'bg-sky-500/10 text-sky-500 dark:text-sky-400',
+    glowClass: 'hover:border-sky-500/50 hover:shadow-[0_0_20px_-3px_rgba(14,165,233,0.25)]',
+    bgGradient: 'from-sky-500/20 to-sky-600/5 dark:from-sky-500/15 dark:to-transparent',
+    description: 'Internal medicine, cardiology, neurology, nephrology, and clinical diagnosis.',
+    accentHex: '#0ea5e9',
+    hoverText: 'group-hover:text-sky-500 dark:group-hover:text-sky-400',
+    hoverBg: 'group-hover:bg-sky-50/50 dark:group-hover:bg-sky-950/10',
+    hoverBorder: 'group-hover:border-sky-500/30 dark:group-hover:border-sky-400/20'
+  },
+  'Surgery': {
+    icon: Scissors,
+    colorClass: 'text-red-650',
+    badgeClass: 'bg-red-500/10 text-red-650 dark:text-red-400',
+    glowClass: 'hover:border-red-500/50 hover:shadow-[0_0_20px_-3px_rgba(239,68,68,0.25)]',
+    bgGradient: 'from-red-500/20 to-red-600/5 dark:from-red-500/15 dark:to-transparent',
+    description: 'General surgical principles, trauma, gastrointestinal and endocrine surgery.',
+    accentHex: '#ef4444',
+    hoverText: 'group-hover:text-red-500 dark:group-hover:text-red-400',
+    hoverBg: 'group-hover:bg-red-50/50 dark:group-hover:bg-red-950/10',
+    hoverBorder: 'group-hover:border-red-500/30 dark:group-hover:border-red-400/20'
+  },
+  'Pediatrics': {
+    icon: Baby,
+    colorClass: 'text-pink-500',
+    badgeClass: 'bg-pink-500/10 text-pink-500 dark:text-pink-400',
+    glowClass: 'hover:border-pink-500/50 hover:shadow-[0_0_20px_-3px_rgba(236,72,153,0.25)]',
+    bgGradient: 'from-pink-500/20 to-pink-600/5 dark:from-pink-500/15 dark:to-transparent',
+    description: 'Neonatology, growth & development, pediatric nutrition, and systemic disorders.',
+    accentHex: '#ec4899',
+    hoverText: 'group-hover:text-pink-500 dark:group-hover:text-pink-400',
+    hoverBg: 'group-hover:bg-pink-50/50 dark:group-hover:bg-pink-950/10',
+    hoverBorder: 'group-hover:border-pink-500/30 dark:group-hover:border-pink-400/20'
+  },
+  'Obstetrics & Gynaecology': {
+    icon: Sparkles,
+    colorClass: 'text-rose-600',
+    badgeClass: 'bg-rose-600/10 text-rose-600 dark:text-rose-400',
+    glowClass: 'hover:border-rose-600/50 hover:shadow-[0_0_20px_-3px_rgba(225,29,72,0.25)]',
+    bgGradient: 'from-rose-600/20 to-rose-700/5 dark:from-rose-600/15 dark:to-transparent',
+    description: 'Antenatal care, labor management, gynecological disorders, and reproductive health.',
+    accentHex: '#e11d48',
+    hoverText: 'group-hover:text-rose-600 dark:group-hover:text-rose-400',
+    hoverBg: 'group-hover:bg-rose-50/50 dark:group-hover:bg-rose-950/10',
+    hoverBorder: 'group-hover:border-rose-600/30 dark:group-hover:border-rose-400/20'
+  }
+};
+
+function getSubjectConfig(subjectName: string) {
+  const config = subjectConfigs[subjectName];
+  if (config) return config;
+  
+  return {
+    icon: BookOpen,
+    colorClass: 'text-indigo-500',
+    badgeClass: 'bg-indigo-500/10 text-indigo-500 dark:text-indigo-400',
+    glowClass: 'hover:border-indigo-500/50 hover:shadow-[0_0_20px_-3px_rgba(99,102,241,0.25)]',
+    bgGradient: 'from-indigo-500/20 to-indigo-600/5 dark:from-indigo-500/15 dark:to-transparent',
+    description: `Comprehensive syllabus and practice questions for ${subjectName}.`,
+    accentHex: '#6366f1',
+    hoverText: 'group-hover:text-indigo-500 dark:group-hover:text-indigo-400',
+    hoverBg: 'group-hover:bg-indigo-50/50 dark:group-hover:bg-indigo-950/10',
+    hoverBorder: 'group-hover:border-indigo-500/30 dark:group-hover:border-indigo-400/20'
+  };
+}
+
+const shouldCategorizeSection = (sectionName: string) => {
+  const normalized = sectionName.toLowerCase();
+  return (
+    normalized.includes('section 4') ||
+    normalized.includes('section 5') ||
+    normalized.includes('section 6') ||
+    normalized.includes('section 7') ||
+    normalized.includes('section 8') ||
+    normalized.includes('section 9') ||
+    normalized.includes('section 10') ||
+    normalized.includes('section 11')
+  );
+};
+
+const getChapterCategory = (chapterName: string, chapterDesc: string): string => {
+  const name = chapterName.toLowerCase();
+  const desc = chapterDesc.toLowerCase();
+  
+  if (
+    name.includes('infective syndromes of') || 
+    name.includes('infective syndromes') || 
+    name.includes('gastrointestinal infective') ||
+    name.includes('bloodstream infections') ||
+    name.includes('ocular and ear') ||
+    name.includes('congenital infections') ||
+    name.includes('organism with oncogenic') ||
+    name.includes('zoonotic infections')
+  ) {
+    return 'General Infective Syndromes';
+  }
+
+  if (
+    name.includes('fungal') || 
+    name.includes('mycoses') || 
+    name.includes('candidiasis') || 
+    name.includes('candida') ||
+    name.includes('histoplasmosis') ||
+    name.includes('coccioidomycosis') ||
+    name.includes('dermatophytosis') ||
+    name.includes('mycetoma') ||
+    name.includes('sporotrichosis') ||
+    name.includes('cryptococcal') ||
+    name.includes('aspergillosis') ||
+    name.includes('pneumocystis') ||
+    desc.includes('fungal') ||
+    desc.includes('mycoses') ||
+    desc.includes('candida')
+  ) {
+    return 'Fungal Infections';
+  }
+
+  if (
+    name.includes('parasitic') || 
+    name.includes('malaria') || 
+    name.includes('babesiosis') || 
+    name.includes('plasmodium') || 
+    name.includes('leishmaniasis') || 
+    name.includes('trypanosomiasis') || 
+    name.includes('leishmania') || 
+    name.includes('kala-azar') || 
+    name.includes('filariasis') || 
+    name.includes('protozoan') || 
+    name.includes('amoebiasis') || 
+    name.includes('giardiasis') || 
+    name.includes('coccidian') || 
+    name.includes('balantidiasis') || 
+    name.includes('blastocystosis') || 
+    name.includes('helminthic') || 
+    name.includes('cestodes') || 
+    name.includes('nematodes') || 
+    name.includes('trematodes') || 
+    name.includes('hydatid') || 
+    name.includes('echinococcus') || 
+    name.includes('fasciola') || 
+    name.includes('clonorchis') || 
+    name.includes('scabies') || 
+    name.includes('guinea worm') || 
+    name.includes('neurocysticercosis') || 
+    name.includes('toxoplasmosis') ||
+    desc.includes('parasitic') ||
+    desc.includes('parasite') ||
+    desc.includes('protozoa') ||
+    desc.includes('helminth')
+  ) {
+    return 'Parasitic Infections';
+  }
+
+  if (
+    name.includes('viral') || 
+    name.includes('virus') || 
+    name.includes('hiv') || 
+    name.includes('aids') || 
+    name.includes('hemorrhagic fever') || 
+    name.includes('vhf') || 
+    name.includes('dengue') || 
+    name.includes('chikungunya') || 
+    name.includes('ebola') || 
+    name.includes('yellow fever') || 
+    name.includes('rotaviruses') || 
+    name.includes('gastroenteritis') || 
+    name.includes('hepatitis') || 
+    name.includes('exanthems') || 
+    name.includes('measles') || 
+    name.includes('rubella') || 
+    name.includes('varicella') || 
+    name.includes('hpv') || 
+    name.includes('molluscum') || 
+    name.includes('influenza') || 
+    name.includes('parainfluenza') || 
+    name.includes('mumps') || 
+    name.includes('rsv') || 
+    name.includes('coronavirus') || 
+    name.includes('covid') || 
+    name.includes('rhinovirus') || 
+    name.includes('adenovirus') || 
+    name.includes('ebv') || 
+    name.includes('poliomyelitis') || 
+    name.includes('rabies') || 
+    name.includes('hsv') || 
+    name.includes('encephalitis') || 
+    name.includes('arboviral') || 
+    name.includes('japanese encephalitis') || 
+    name.includes('nipah') ||
+    desc.includes('viral') ||
+    desc.includes('virus') ||
+    desc.includes('hiv')
+  ) {
+    return 'Viral Infections';
+  }
+
+  return 'Bacterial Infections';
+};
+
+const getCategoryStyle = (category: string) => {
+  switch (category) {
+    case 'Bacterial Infections':
+      return {
+        badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100/60 dark:border-emerald-900/30',
+        dot: 'bg-emerald-500',
+        text: 'text-emerald-800 dark:text-emerald-300'
+      };
+    case 'Viral Infections':
+      return {
+        badge: 'bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400 border border-purple-100/60 dark:border-purple-900/30',
+        dot: 'bg-purple-500',
+        text: 'text-purple-800 dark:text-purple-300'
+      };
+    case 'Parasitic Infections':
+      return {
+        badge: 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-100/60 dark:border-rose-900/30',
+        dot: 'bg-rose-500',
+        text: 'text-rose-800 dark:text-rose-300'
+      };
+    case 'Fungal Infections':
+      return {
+        badge: 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/60 dark:border-amber-900/30',
+        dot: 'bg-amber-500',
+        text: 'text-amber-800 dark:text-amber-300'
+      };
+    default:
+      return {
+        badge: 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border border-blue-100/60 dark:border-blue-900/30',
+        dot: 'bg-blue-500',
+        text: 'text-blue-800 dark:text-blue-300'
+      };
+  }
+};
 
 interface QBankProps {
   onStartQuiz: (mcqsToSolve: MCQ[], testTitle: string) => void;
   onQuestionClick?: (questionId: string) => void;
 }
 
+const DEFAULT_SUBJECTS = [
+  { id: 'subj-anatomy', name: 'Anatomy', description: 'Study of human structure, gross anatomy, osteology, and developmental biology.', icon: 'Bone' },
+  { id: 'subj-physiology', name: 'Physiology', description: 'Explore cell physiology, organ systems, biophysics, and homeostatic mechanisms.', icon: 'HeartPulse' },
+  { id: 'subj-biochemistry', name: 'Biochemistry', description: 'Biomolecules, metabolic pathways, molecular genetics, and clinical chemistry.', icon: 'Dna' },
+  { id: 'subj-pathology', name: 'Pathology', description: 'General pathology, hematology, systemic pathology, and diagnostic cytopathology.', icon: 'Brain' },
+  { id: 'subj-pharmacology', name: 'Pharmacology', description: 'Pharmacokinetics, pharmacodynamics, therapeutics, and drug interactions.', icon: 'Pill' },
+  { id: 'subj-microbiology', name: 'Microbiology', description: 'Bacteriology, virology, mycology, parasitology, and immunology.', icon: 'Microscope' },
+  { id: 'subj-commmedicine', name: 'Community Medicine', description: 'Epidemiology, biostatistics, public health, and preventive medicine.', icon: 'Users' },
+  { id: 'subj-forensic', name: 'Forensic Medicine', description: 'Medical jurisprudence, toxicology, forensic pathology, and legal procedures.', icon: 'Scale' },
+  { id: 'subj-ophthal', name: 'Ophthalmology', description: 'Ocular diseases, refraction, ophthalmic surgery, and visual pathways.', icon: 'Eye' },
+  { id: 'subj-ent', name: 'ENT', description: 'Diseases of ear, nose, throat, and head & neck surgery.', icon: 'Ear' },
+  { id: 'subj-medicine', name: 'Medicine', description: 'Internal medicine, cardiology, neurology, nephrology, and clinical diagnosis.', icon: 'Stethoscope' },
+  { id: 'subj-surgery', name: 'Surgery', description: 'General surgical principles, trauma, gastrointestinal and endocrine surgery.', icon: 'Scissors' },
+  { id: 'subj-pediatrics', name: 'Pediatrics', description: 'Neonatology, growth & development, pediatric nutrition, and systemic disorders.', icon: 'Baby' },
+  { id: 'subj-obg', name: 'Obstetrics & Gynaecology', description: 'Antenatal care, labor management, gynecological disorders, and reproductive health.', icon: 'Sparkles' }
+];
+
 export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
   // Current user state from localStorage (role check authorization)
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [subjectsList, setSubjectsList] = useState<any[]>([]);
-  const [chaptersList, setChaptersList] = useState<any[]>([]);
-  const [topicsList, setTopicsList] = useState<any[]>([]);
+  
+  const [subjectsList, setSubjectsList] = useState<any[]>(() => {
+    try {
+      const cached = safeStorage.getItem('medbank_cached_subjects');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Error parsing cached subjects:', e);
+    }
+    return DEFAULT_SUBJECTS;
+  });
+
+  const [chaptersList, setChaptersList] = useState<any[]>(() => {
+    try {
+      const cached = safeStorage.getItem('medbank_cached_chapters');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Error parsing cached chapters:', e);
+    }
+    return [];
+  });
+
+  const [topicsList, setTopicsList] = useState<any[]>(() => {
+    try {
+      const cached = safeStorage.getItem('medbank_cached_topics');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Error parsing cached topics:', e);
+    }
+    return [];
+  });
+
   const [dbQuestionCounts, setDbQuestionCounts] = useState<{
     total: number;
     subjects: { [key: string]: number };
     chapters: { [key: string]: number };
     topics: { [key: string]: number };
-  }>({ total: 0, subjects: {}, chapters: {}, topics: {} });
+  }>(() => {
+    try {
+      const cached = safeStorage.getItem('medbank_cached_counts');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch (e) {
+      console.error('Error parsing cached counts:', e);
+    }
+    return { total: 0, subjects: {}, chapters: {}, topics: {} };
+  });
+
   const [countsLoading, setCountsLoading] = useState(false);
   const [countsError, setCountsError] = useState<string | null>(null);
 
@@ -42,19 +480,18 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
   }, []);
 
   useEffect(() => {
-    setCountsLoading(true);
     setCountsError(null);
+    
+    // Fetch subjects, chapters, and topics in parallel (fast metadata)
     Promise.all([
       fetchDBSubjects(),
       fetchDBChapters(),
-      fetchDBTopics(),
-      fetchDBQuestionCounts(currentUser?.email)
-    ]).then(([subs, chaps, tops, counts]) => {
-      setSubjectsList(subs);
-      setChaptersList(chaps);
-      setTopicsList(tops);
-      setDbQuestionCounts(counts);
-      if (subs.length > 0) {
+      fetchDBTopics()
+    ]).then(([subs, chaps, tops]) => {
+      if (subs && subs.length > 0) {
+        setSubjectsList(subs);
+        safeStorage.setItem('medbank_cached_subjects', JSON.stringify(subs));
+        
         setExpandedSubjects(prev => {
           const init: { [sub: string]: boolean } = {};
           subs.forEach((s, idx) => {
@@ -63,12 +500,29 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
           return init;
         });
       }
+      if (chaps && chaps.length > 0) {
+        setChaptersList(chaps);
+        safeStorage.setItem('medbank_cached_chapters', JSON.stringify(chaps));
+      }
+      if (tops && tops.length > 0) {
+        setTopicsList(tops);
+        safeStorage.setItem('medbank_cached_topics', JSON.stringify(tops));
+      }
     }).catch(err => {
       console.error("Error loading QBank dynamic syllabus options:", err);
-      setCountsError(err.message || "Failed to load curriculum counts");
-    }).finally(() => {
-      setCountsLoading(false);
     });
+
+    // Fetch counts independently in background (slower statistics query)
+    fetchDBQuestionCounts(currentUser?.email)
+      .then((counts) => {
+        if (counts) {
+          setDbQuestionCounts(counts);
+          safeStorage.setItem('medbank_cached_counts', JSON.stringify(counts));
+        }
+      })
+      .catch((err) => {
+        console.error("Error loading dynamic question counts:", err);
+      });
   }, [currentUser]);
 
   // Database State
@@ -90,6 +544,14 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
   // UI Sidebar Tree States
   const [expandedSubjects, setExpandedSubjects] = useState<{ [sub: string]: boolean }>({});
   const [expandedChapters, setExpandedChapters] = useState<{ [chap: string]: boolean }>({});
+  const [expandedSections, setExpandedSections] = useState<{ [sec: string]: boolean }>({});
+  const [expandedCategories, setExpandedCategories] = useState<{ [cat: string]: boolean }>({});
+
+  useEffect(() => {
+    setExpandedSections({});
+    setExpandedCategories({});
+    setExpandedChapters({});
+  }, [selectedSubject]);
 
   // Bookmarks state (bound to localStorage)
   const [bookmarks, setBookmarks] = useState<string[]>(getBookmarks());
@@ -111,6 +573,11 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
   const [viewMode, setViewMode] = useState<'paginated' | 'scroll'>('scroll');
   const [scrollLimit, setScrollLimit] = useState(10);
 
+  // QBank navigation / UI state machine
+  const [viewState, setViewState] = useState<'SUBJECTS' | 'CHAPTERS' | 'CHAPTER_DASHBOARD' | 'QUESTIONS_LIST'>('SUBJECTS');
+  const [chapterFilterMode, setChapterFilterMode] = useState<'all' | 'topic' | 'image' | 'clinical' | 'pyq'>('all');
+  const [showTopicSelector, setShowTopicSelector] = useState(false);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       if (window.innerWidth >= 1024) {
@@ -125,29 +592,34 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
 
   // Load questions on mount and when user logs in/changes
   const loadQuestions = async () => {
+    // If on main subjects list and not searching or showing bookmarks/incorrects, we don't need the heavy questions array
+    if (selectedSubject === 'All' && !search && !showBookmarkedOnly && !showIncorrectOnly) {
+      setQuestions([]);
+      setTotalQuestions(0);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      console.log('[QBank Rendering] Loading questions from MongoDB Atlas...');
+      console.log('[QBank] Lazy loading questions from MongoDB Atlas...');
       const email = currentUser?.email || '';
       
-      const isClientFiltering = showBookmarkedOnly || showIncorrectOnly;
+      const isClientFiltering = showBookmarkedOnly || showIncorrectOnly || (viewState === 'QUESTIONS_LIST' && chapterFilterMode !== 'all');
       const page = isClientFiltering ? undefined : (viewMode === 'paginated' ? currentPage : 1);
       const limit = isClientFiltering ? undefined : (viewMode === 'paginated' ? 20 : scrollLimit);
 
-      const [res, countsData] = await Promise.all([
-        fetchDBQuestions(email, {
-          page,
-          limit,
-          subject: selectedSubject,
-          chapter: selectedChapter,
-          topic: selectedTopic,
-          difficulty: selectedDifficulty,
-          type: selectedType,
-          search: search
-        }),
-        fetchDBQuestionCounts(email)
-      ]);
+      const res = await fetchDBQuestions(email, {
+        page,
+        limit,
+        subject: selectedSubject,
+        chapter: selectedChapter,
+        topic: selectedTopic,
+        difficulty: selectedDifficulty,
+        type: selectedType,
+        search: search
+      });
 
       if (res && typeof res === 'object' && 'questions' in res) {
         setQuestions(res.questions || []);
@@ -156,13 +628,9 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
         setQuestions(res);
         setTotalQuestions(res.length);
       } else {
-        console.warn('[QBank Rendering] Questions collection is empty or invalid. Falling back to local mock MCQs.');
+        console.warn('[QBank Rendering] Questions collection empty, falling back to local MCQs.');
         setQuestions(getAllMCQs());
         setTotalQuestions(getAllMCQs().length);
-      }
-
-      if (countsData) {
-        setDbQuestionCounts(countsData);
       }
     } catch (err: any) {
       console.error('[QBank Rendering] Failed to fetch questions from MongoDB:', err);
@@ -191,7 +659,9 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
     selectedType, 
     search,
     showBookmarkedOnly,
-    showIncorrectOnly
+    showIncorrectOnly,
+    viewState,
+    chapterFilterMode
   ]);
 
   // Read all incorrect question IDs from previous attempts
@@ -299,6 +769,72 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
     return counts;
   }, [questions, dbQuestionCounts]);
 
+  const chaptersInSubject = useMemo(() => {
+    return chaptersList.filter(c => c && c.subject === selectedSubject && c.isActive !== false);
+  }, [chaptersList, selectedSubject]);
+
+  const sectionsMap = useMemo(() => {
+    const map: { [key: string]: any[] } = {};
+    chaptersInSubject.forEach(chapter => {
+      const secName = chapter.section || 'General';
+      if (!map[secName]) {
+        map[secName] = [];
+      }
+      map[secName].push(chapter);
+    });
+    return map;
+  }, [chaptersInSubject]);
+
+  const sectionKeys = useMemo(() => {
+    return Object.keys(sectionsMap).sort((a, b) => {
+      const getNum = (s: string) => {
+        const match = s.match(/Section\s+(\d+)/i);
+        if (match) return parseInt(match[1], 10);
+        
+        const unitMatch = s.match(/Unit\s+([IVXLCDM]+)/i);
+        if (unitMatch) {
+          const roman = unitMatch[1].toUpperCase();
+          const romanMap: { [key: string]: number } = {
+            'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
+            'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10,
+            'XI': 11, 'XII': 12, 'XIII': 13, 'XIV': 14, 'XV': 15
+          };
+          if (romanMap[roman]) return romanMap[roman];
+        }
+
+        if (s.toLowerCase().includes('annexure')) return 98;
+        if (s.toLowerCase().includes('unassigned')) return 99;
+        if (s === 'General') return 0;
+        return 100;
+      };
+      return getNum(a) - getNum(b);
+    });
+  }, [sectionsMap]);
+
+  const sectionCountsMap = useMemo(() => {
+    const counts: { [sec: string]: number } = {};
+    chaptersInSubject.forEach(chapter => {
+      const sec = chapter.section || 'General';
+      const chCount = syllabusCounts.chapters[chapter.name] || 0;
+      counts[sec] = (counts[sec] || 0) + chCount;
+    });
+    return counts;
+  }, [chaptersInSubject, syllabusCounts.chapters]);
+
+  const categoryCountsMap = useMemo(() => {
+    const counts: { [secCat: string]: number } = {};
+    chaptersInSubject.forEach(chapter => {
+      const sec = chapter.section || 'General';
+      if (selectedSubject === 'Microbiology' && shouldCategorizeSection(sec)) {
+        const cat = getChapterCategory(chapter.name, chapter.description || '');
+        const chCount = syllabusCounts.chapters[chapter.name] || 0;
+        const key = `${sec}-${cat}`;
+        counts[key] = (counts[key] || 0) + chCount;
+      }
+    });
+    return counts;
+  }, [chaptersInSubject, syllabusCounts.chapters, selectedSubject]);
+
   // Filtered MCQs list based on all filters + tree navigation selections
   const filteredMCQs = useMemo(() => {
     let list = questions;
@@ -316,6 +852,17 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
     // 3. Sidebar Tree Topic Filter
     if (selectedTopic !== 'All') {
       list = list.filter(item => item.topic === selectedTopic);
+    }
+
+    // 3.5 Chapter dashboard custom modes
+    if (viewState === 'QUESTIONS_LIST') {
+      if (chapterFilterMode === 'image') {
+        list = list.filter(item => !!item.image || ['Image Based', 'Image-based MCQ'].includes(item.type) || (item.tags && item.tags.some(tag => tag.toLowerCase().includes('image'))));
+      } else if (chapterFilterMode === 'clinical') {
+        list = list.filter(item => ['Clinical Scenario', 'Clinical Case Based', 'Case-based MCQ'].includes(item.type) || (item.tags && item.tags.some(tag => tag.toLowerCase().includes('clinical'))) || item.question.toLowerCase().includes('old') || item.question.toLowerCase().includes('presents with'));
+      } else if (chapterFilterMode === 'pyq') {
+        list = list.filter(item => (item.targetExams && item.targetExams.length > 0) || (item.tags && item.tags.some(t => ['pyq', 'neet', 'ini-cet', 'fmge', 'exam', 'previous year'].includes(t.toLowerCase()))) || !!item.examSource);
+      }
     }
 
     // 4. Full-text search
@@ -355,7 +902,7 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
   }, [
     questions, search, selectedSubject, selectedChapter, selectedTopic, 
     selectedDifficulty, selectedType, showBookmarkedOnly, showIncorrectOnly, 
-    bookmarks, incorrectQuestionIds
+    bookmarks, incorrectQuestionIds, viewState, chapterFilterMode
   ]);
 
   // Reset pagination on search or filter change
@@ -364,18 +911,19 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
     setScrollLimit(10);
   }, [
     search, selectedSubject, selectedChapter, selectedTopic, 
-    selectedDifficulty, selectedType, showBookmarkedOnly, showIncorrectOnly
+    selectedDifficulty, selectedType, showBookmarkedOnly, showIncorrectOnly,
+    viewState, chapterFilterMode
   ]);
 
   // Paginated questions variables
   const totalPages = useMemo(() => {
-    const isClientFiltering = showBookmarkedOnly || showIncorrectOnly;
+    const isClientFiltering = showBookmarkedOnly || showIncorrectOnly || (viewState === 'QUESTIONS_LIST' && chapterFilterMode !== 'all');
     const total = isClientFiltering ? filteredMCQs.length : totalQuestions;
     return Math.max(1, Math.ceil(total / (viewMode === 'paginated' ? 20 : scrollLimit)));
-  }, [totalQuestions, showBookmarkedOnly, showIncorrectOnly, filteredMCQs.length, viewMode, scrollLimit]);
+  }, [totalQuestions, showBookmarkedOnly, showIncorrectOnly, filteredMCQs.length, viewMode, scrollLimit, viewState, chapterFilterMode]);
 
   const paginatedMCQs = useMemo(() => {
-    const isClientFiltering = showBookmarkedOnly || showIncorrectOnly;
+    const isClientFiltering = showBookmarkedOnly || showIncorrectOnly || (viewState === 'QUESTIONS_LIST' && chapterFilterMode !== 'all');
     if (isClientFiltering) {
       if (viewMode === 'scroll') {
         return filteredMCQs.slice(0, scrollLimit);
@@ -384,7 +932,7 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
       return filteredMCQs.slice(sIdx, sIdx + 20);
     }
     return filteredMCQs;
-  }, [filteredMCQs, showBookmarkedOnly, showIncorrectOnly, viewMode, scrollLimit, currentPage]);
+  }, [filteredMCQs, showBookmarkedOnly, showIncorrectOnly, viewMode, scrollLimit, currentPage, viewState, chapterFilterMode]);
 
   const getPageNumbers = () => {
     const pages = [];
@@ -478,6 +1026,18 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
     setSelectedSubject(sub);
     setSelectedChapter(chap);
     setSelectedTopic(top);
+    if (sub === 'All') {
+      setViewState('SUBJECTS');
+      setChapterFilterMode('all');
+    } else if (chap === 'All') {
+      setViewState('CHAPTERS');
+      setChapterFilterMode('all');
+    } else if (top === 'All') {
+      setViewState('CHAPTER_DASHBOARD');
+    } else {
+      setViewState('QUESTIONS_LIST');
+      setChapterFilterMode('topic');
+    }
   };
 
   // Pre-compiled Mock Tests
@@ -520,198 +1080,807 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
             </button>
           )}
         </div>
-      </div>
+      </div>      {/* Breadcrumb Navigation Trail */}
+      <div className="bg-white dark:bg-[#18181b] border border-[#e4e4e7] dark:border-[#27272a] rounded-2xl p-4 flex items-center justify-between shadow-sm">
+        <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-800 dark:text-zinc-200 font-bold">
+          <button 
+            type="button"
+            onClick={() => handleSelectSyllabusNode('All')}
+            className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+          >
+            QBank Dashboard
+          </button>
+          
+          {selectedSubject !== 'All' && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+              <button 
+                type="button"
+                onClick={() => handleSelectSyllabusNode(selectedSubject)}
+                className={`hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer ${viewState === 'CHAPTERS' ? 'text-indigo-600 dark:text-indigo-400' : ''}`}
+              >
+                {selectedSubject}
+              </button>
+            </>
+          )}
+          
+          {selectedSubject !== 'All' && selectedChapter !== 'All' && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+              <button 
+                type="button"
+                onClick={() => handleSelectSyllabusNode(selectedSubject, selectedChapter)}
+                className={`hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer ${viewState === 'CHAPTER_DASHBOARD' ? 'text-indigo-600 dark:text-indigo-400' : ''}`}
+              >
+                {selectedChapter}
+              </button>
+            </>
+          )}
 
-      {/* Mobile Toggle for Curriculum Explorer */}
-      <div className="lg:hidden w-full">
-        <button
-          type="button"
-          onClick={() => setIsCurriculumOpen(!isCurriculumOpen)}
-          className="w-full flex items-center justify-between p-3.5 bg-white dark:bg-[#18181b] border border-[#e4e4e7] dark:border-[#27272a] rounded-2xl text-xs font-bold text-slate-800 dark:text-zinc-200 shadow-sm"
-        >
-          <div className="flex items-center space-x-2">
-            <Layers className="h-4 w-4 text-indigo-500" />
-            <span>Curriculum Explorer & Mock Tests</span>
-          </div>
-          <div className="flex items-center space-x-1.5">
-            <span className="bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full text-[10px] font-bold">
-              {selectedSubject === 'All' ? 'All Questions' : selectedSubject}
-            </span>
-            <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isCurriculumOpen ? 'rotate-180' : ''}`} />
-          </div>
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* Left Side: Interactive Curriculum Tree Selector */}
-        {isCurriculumOpen && (
-          <div className="lg:col-span-4 bg-white dark:bg-[#18181b] border border-[#e4e4e7] dark:border-[#27272a] rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-[#e4e4e7] dark:border-[#27272a] bg-slate-50/50 dark:bg-zinc-900/30 flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <Layers className="h-4 w-4 text-slate-500" />
-              <span className="font-extrabold text-xs text-slate-800 dark:text-zinc-200 uppercase tracking-wider">Curriculum Explorer</span>
-            </div>
-            <button 
-              onClick={() => handleSelectSyllabusNode('All')}
-              className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-            >
-              Clear Navigation
-            </button>
-          </div>
-
-          <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
-            {/* All Subjects Root Node */}
-            <button
-              onClick={() => handleSelectSyllabusNode('All')}
-              className={`w-full flex items-center justify-between p-2.5 rounded-lg text-xs font-bold transition-all text-left border ${
-                selectedSubject === 'All' 
-                  ? 'bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-950/40' 
-                  : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-zinc-900 text-slate-700 dark:text-zinc-300'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <FolderOpen className="h-4 w-4 text-indigo-500 shrink-0" />
-                <span>Show All Questions</span>
-              </div>
-              <span className="bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-500">
-                {syllabusCounts.total}
+          {selectedSubject !== 'All' && selectedChapter !== 'All' && selectedTopic !== 'All' && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+              <span className="text-[#18181b] dark:text-white underline decoration-wavy decoration-indigo-400">
+                {selectedTopic}
               </span>
-            </button>
+            </>
+          )}
 
-            {/* Subject Nodes */}
-            <div className="space-y-2 border-t border-slate-50 dark:border-zinc-850 pt-3">
-              {(Object.keys(dynamicSyllabus) as SubjectName[]).map(sub => {
-                const isSubjectActive = selectedSubject === sub;
-                const isSubjectExpanded = expandedSubjects[sub];
-                const chapters = dynamicSyllabus[sub];
-                const subCount = syllabusCounts.subjects[sub] || 0;
+          {selectedSubject !== 'All' && selectedChapter !== 'All' && viewState === 'QUESTIONS_LIST' && chapterFilterMode !== 'all' && chapterFilterMode !== 'topic' && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+              <span className="text-indigo-600 dark:text-indigo-400 uppercase tracking-wider text-[10px]">
+                {chapterFilterMode === 'image' ? 'Image-based MCQs' : 
+                 chapterFilterMode === 'clinical' ? 'Clinical Case MCQs' : 
+                 chapterFilterMode === 'pyq' ? 'Previous Year MCQs' : ''}
+              </span>
+            </>
+          )}
+        </div>
 
-                return (
-                  <div key={sub} className="space-y-1">
-                    <div className="flex items-center justify-between w-full">
-                      <button
-                        onClick={() => {
-                          handleSelectSyllabusNode(sub);
-                          handleToggleSubjectCollapse(sub);
-                        }}
-                        className={`flex-1 flex items-center justify-between p-2 rounded-lg text-xs font-bold transition-all text-left ${
-                          isSubjectActive && selectedChapter === 'All'
-                            ? 'bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 font-extrabold'
-                            : 'text-slate-800 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-900'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-1.5 min-w-0">
-                          {isSubjectExpanded ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400" />}
-                          <span className="truncate">{sub}</span>
-                        </div>
-                        <span className="bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-full text-[9px] font-bold text-slate-500 shrink-0 ml-1">
-                          {subCount}
-                        </span>
-                      </button>
+        {viewState !== 'SUBJECTS' && (
+          <button
+            type="button"
+            onClick={() => {
+              if (viewState === 'QUESTIONS_LIST') {
+                if (chapterFilterMode === 'topic') {
+                  setSelectedTopic('All');
+                }
+                setViewState('CHAPTER_DASHBOARD');
+              } else if (viewState === 'CHAPTER_DASHBOARD') {
+                setSelectedChapter('All');
+                setViewState('CHAPTERS');
+              } else if (viewState === 'CHAPTERS') {
+                setSelectedSubject('All');
+                setViewState('SUBJECTS');
+              }
+            }}
+            className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer flex items-center space-x-1"
+          >
+            <span>← Go Back</span>
+          </button>
+        )}
+      </div>
+
+      {/* State Render Blocks */}
+      {viewState === 'SUBJECTS' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight uppercase">
+              Select a Subject to Begin
+            </h3>
+            <span className="text-xs font-semibold text-slate-400">
+              Total {syllabusCounts.total || questions.length} MCQs Available
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+            {(Object.keys(dynamicSyllabus) as SubjectName[]).map((sub) => {
+              const count = syllabusCounts.subjects[sub] || 0;
+              const chapters = Object.keys(dynamicSyllabus[sub] || {});
+              const chapterCount = chapters.length;
+              const config = getSubjectConfig(sub);
+              const IconComponent = config.icon;
+
+              return (
+                <div
+                  key={sub}
+                  onClick={() => handleSelectSyllabusNode(sub)}
+                  className={`bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-zinc-800/80 rounded-[18px] p-4 hover:-translate-y-1 hover:scale-[1.02] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-lg transition-all duration-300 cursor-pointer flex flex-col justify-between h-[165px] relative overflow-hidden group ${config.glowClass}`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center space-x-2.5">
+                      <div className={`w-8.5 h-8.5 rounded-full bg-gradient-to-br ${config.bgGradient} flex items-center justify-center shrink-0 border border-slate-100 dark:border-zinc-800/55 shadow-sm`}>
+                        <IconComponent className={`h-4.5 w-4.5 ${config.colorClass}`} />
+                      </div>
+                      <h4 className="font-bold text-[13px] text-slate-900 dark:text-zinc-100 tracking-tight leading-tight truncate">
+                        {sub}
+                      </h4>
                     </div>
 
-                    {/* Chapter Dropdown under Subject */}
-                    {isSubjectExpanded && (
-                      <div className="pl-4 border-l border-slate-100 dark:border-zinc-850 space-y-1 ml-3 mt-1">
-                        {Object.keys(chapters).map(chap => {
-                          const isChapterActive = selectedSubject === sub && selectedChapter === chap;
-                          const isChapterExpanded = expandedChapters[chap];
-                          const topics = chapters[chap];
-                          const chapCount = syllabusCounts.chapters[chap] || 0;
+                    <p className="text-[10px] text-slate-500 dark:text-zinc-400 leading-normal font-medium line-clamp-2 min-h-[30px] pr-1">
+                      {config.description}
+                    </p>
+                  </div>
 
-                          return (
-                            <div key={chap} className="space-y-1">
-                              <button
-                                onClick={() => {
-                                  handleSelectSyllabusNode(sub, chap);
-                                  handleToggleChapterCollapse(chap);
-                                }}
-                                className={`w-full flex items-center justify-between p-1.5 rounded-md text-[11px] font-semibold transition-all text-left ${
-                                  isChapterActive && selectedTopic === 'All'
-                                    ? 'bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white font-bold'
-                                    : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-900'
-                                }`}
-                              >
-                                <div className="flex items-center space-x-1.5 min-w-0">
-                                  {isChapterExpanded ? <ChevronDown className="h-3 w-3 text-slate-400" /> : <ChevronRight className="h-3 w-3 text-slate-400" />}
-                                  <span className="truncate">{chap}</span>
-                                </div>
-                                <span className="text-[9px] text-slate-400 shrink-0 ml-1 font-bold">
-                                  ({chapCount})
-                                </span>
-                              </button>
-
-                              {/* Topics Dropdown under Chapter */}
-                              {isChapterExpanded && (
-                                <div className="pl-3 border-l border-slate-100 dark:border-zinc-800 space-y-1 ml-2.5">
-                                  {topics.map(top => {
-                                    const isTopicActive = selectedSubject === sub && selectedChapter === chap && selectedTopic === top;
-                                    const topCount = syllabusCounts.topics[top] || 0;
-
-                                    return (
-                                      <button
-                                        key={top}
-                                        onClick={() => handleSelectSyllabusNode(sub, chap, top)}
-                                        className={`w-full flex items-center justify-between p-1 rounded-md text-[10px] transition-all text-left ${
-                                          isTopicActive
-                                            ? 'text-indigo-600 dark:text-indigo-400 font-bold'
-                                            : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200'
-                                        }`}
-                                      >
-                                        <div className="flex items-center space-x-1 min-w-0">
-                                          <div className={`w-1 h-1 rounded-full ${isTopicActive ? 'bg-indigo-500' : 'bg-slate-300'}`} />
-                                          <span className="truncate">{top}</span>
-                                        </div>
-                                        <span className="text-[9px] text-slate-400 shrink-0">
-                                          {topCount}
-                                        </span>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-zinc-500 border-t border-slate-100 dark:border-zinc-800/60 pt-2 font-semibold">
+                      <div className="flex items-center gap-1">
+                        <BookOpen className="w-3.5 h-3.5 text-slate-400" />
+                        <span><strong className="text-slate-800 dark:text-zinc-300 font-bold">{chapterCount}</strong> Chapters</span>
                       </div>
-                    )}
+                      <div className="flex items-center gap-1">
+                        <Layers className="w-3.5 h-3.5 text-slate-400" />
+                        <span><strong className="text-slate-800 dark:text-zinc-300 font-bold">{count}</strong> MCQs</span>
+                      </div>
+                    </div>
+
+                    <div className={`w-full py-1.5 px-3 bg-slate-50 dark:bg-zinc-950/40 border border-slate-200/80 dark:border-zinc-850 text-[10px] font-bold rounded-lg transition-all duration-300 flex items-center justify-between ${config.hoverBg} ${config.hoverBorder}`}>
+                      <span className={`text-[9px] uppercase tracking-wider font-extrabold text-slate-600 dark:text-zinc-400 ${config.hoverText} transition-colors`}>Explore Chapters</span>
+                      <ArrowRight className={`h-3 w-3 text-slate-400 ${config.hoverText} transition-all transform group-hover:translate-x-1 duration-300`} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {viewState === 'CHAPTERS' && selectedSubject !== 'All' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white tracking-tight uppercase flex items-center gap-2">
+                <Microscope className="h-5 w-5 text-indigo-500" />
+                <span>{selectedSubject} Syllabus Curriculum</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-zinc-400">
+                {selectedSubject === 'Microbiology' || selectedSubject === 'Pharmacology' || selectedSubject === 'Physiology'
+                  ? 'Official book hierarchy with units, sections, chapters, and topics.' 
+                  : `Select a chapter under ${selectedSubject} to open its practice dashboard.`}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleSelectSyllabusNode('All')}
+              className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline shrink-0 text-left cursor-pointer"
+            >
+              ← Back to All Subjects
+            </button>
+          </div>
+
+          {Object.keys(dynamicSyllabus[selectedSubject] || {}).length === 0 ? (
+            <div className="bg-white dark:bg-[#18181b] border border-[#e4e4e7] dark:border-[#27272a] rounded-2xl p-16 text-center text-slate-400">
+              <BookOpen className="h-10 w-10 mx-auto text-slate-300 stroke-1 mb-2" />
+              <h4 className="font-bold text-slate-800 dark:text-white text-xs">No Chapters Registered</h4>
+              <p className="text-[11px]">There are no chapters or questions imported for {selectedSubject} yet.</p>
+            </div>
+          ) : (selectedSubject === 'Microbiology' || selectedSubject === 'Pharmacology' || selectedSubject === 'Physiology') ? (
+            /* Brand New Hierarchical Navigation for Microbiology, Pharmacology, and Physiology QBank */
+            <div className="space-y-4">
+              {sectionKeys.map((sec) => {
+                const isSectionExpanded = !!expandedSections[sec];
+                const sectionChapters = sectionsMap[sec] || [];
+                const secCount = sectionCountsMap[sec] || 0;
+                
+                // Helper to strip prefix for clean display
+                const cleanSecName = sec.toLowerCase().includes('section 12') || sec.toLowerCase() === 'annexures' 
+                  ? 'Annexures' 
+                  : sec.toLowerCase().includes('section 13') 
+                    ? 'Unassigned Questions' 
+                    : sec;
+
+                return (
+                  <div 
+                    key={sec} 
+                    className="bg-white dark:bg-[#18181b] border border-[#e4e4e7] dark:border-[#27272a] rounded-2xl shadow-sm overflow-hidden"
+                  >
+                    {/* Section Header */}
+                    <div
+                      onClick={() => setExpandedSections(prev => ({ ...prev, [sec]: !prev[sec] }))}
+                      className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 dark:hover:bg-zinc-900/40 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3 pr-4 min-w-0">
+                        <div className={`p-2 rounded-xl transition-colors ${
+                          isSectionExpanded 
+                            ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400' 
+                            : 'bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400'
+                        }`}>
+                          <Folder className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-extrabold text-sm text-slate-900 dark:text-white leading-tight truncate">
+                            {cleanSecName}
+                          </h4>
+                          <span className="text-[10px] text-slate-400 font-semibold">
+                            {sectionChapters.length} {sectionChapters.length === 1 ? 'Chapter' : 'Chapters'} defined
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-3 shrink-0">
+                        <span className="text-[10px] font-extrabold bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 px-2.5 py-1 rounded-full">
+                          {secCount} Qs
+                        </span>
+                        {isSectionExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-slate-400 rotate-180 transition-transform" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-slate-400 transition-transform" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Section Content Accordion */}
+                    <AnimatePresence initial={false}>
+                      {isSectionExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-5 border-t border-slate-100 dark:border-zinc-800/50 bg-slate-50/20 dark:bg-zinc-950/10 space-y-4">
+                            {selectedSubject === 'Microbiology' && shouldCategorizeSection(sec) ? (
+                              /* Categorized Sections (Section 4 to 11) - Display Category Headings First */
+                              (() => {
+                                const categorized: { [key: string]: any[] } = {
+                                  'Bacterial Infections': [],
+                                  'Viral Infections': [],
+                                  'Fungal Infections': [],
+                                  'Parasitic Infections': [],
+                                  'General Infective Syndromes': []
+                                };
+                                
+                                sectionChapters.forEach(ch => {
+                                  const cat = getChapterCategory(ch.name, ch.description || '');
+                                  if (categorized[cat]) {
+                                    categorized[cat].push(ch);
+                                  } else {
+                                    categorized['Bacterial Infections'].push(ch);
+                                  }
+                                });
+
+                                const activeCategories = Object.keys(categorized).filter(cat => categorized[cat].length > 0);
+
+                                return (
+                                  <div className="space-y-3 pl-2">
+                                    {activeCategories.map(cat => {
+                                      const isCatExpanded = !!expandedCategories[`${sec}-${cat}`];
+                                      const catChapters = categorized[cat];
+                                      const catCount = categoryCountsMap[`${sec}-${cat}`] || 0;
+                                      const catStyle = getCategoryStyle(cat);
+
+                                      return (
+                                        <div key={cat} className="border border-slate-200/60 dark:border-zinc-800/50 rounded-xl overflow-hidden bg-white dark:bg-[#18181b]">
+                                          {/* Category Header */}
+                                          <div
+                                            onClick={() => setExpandedCategories(prev => ({ ...prev, [`${sec}-${cat}`]: !prev[`${sec}-${cat}`] }))}
+                                            className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-900/20 transition-colors"
+                                          >
+                                            <div className="flex items-center space-x-2.5 min-w-0 pr-4">
+                                              <span className={`h-2 w-2 rounded-full ${catStyle.dot}`} />
+                                              <span className={`text-xs font-bold leading-tight ${catStyle.text} truncate`}>
+                                                {cat}
+                                              </span>
+                                            </div>
+                                            <div className="flex items-center space-x-2 shrink-0">
+                                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${catStyle.badge}`}>
+                                                {catCount} Qs
+                                              </span>
+                                              {isCatExpanded ? (
+                                                <ChevronDown className="h-3.5 w-3.5 text-slate-400 rotate-180" />
+                                              ) : (
+                                                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          {/* Category Chapters Content */}
+                                          <AnimatePresence initial={false}>
+                                            {isCatExpanded && (
+                                              <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: "auto", opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="overflow-hidden"
+                                              >
+                                                <div className="p-3 bg-slate-50/40 dark:bg-zinc-900/10 border-t border-slate-100 dark:border-zinc-800/40 space-y-2">
+                                                  {catChapters.map(chapter => {
+                                                    const isChapExpanded = !!expandedChapters[chapter.name];
+                                                    const chapCount = syllabusCounts.chapters[chapter.name] || 0;
+                                                    const chapTopics = dynamicSyllabus[selectedSubject]?.[chapter.name] || [];
+
+                                                    return (
+                                                      <div key={chapter.name} className="border border-slate-200/50 dark:border-zinc-800/30 rounded-lg bg-white dark:bg-[#141417] overflow-hidden">
+                                                        {/* Chapter Header */}
+                                                        <div
+                                                          onClick={() => setExpandedChapters(prev => ({ ...prev, [chapter.name]: !prev[chapter.name] }))}
+                                                          className="p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-900/30 transition-colors"
+                                                        >
+                                                          <div className="min-w-0 pr-4">
+                                                            <h5 className="font-extrabold text-xs text-slate-800 dark:text-zinc-200 leading-tight">
+                                                              {chapter.name}
+                                                            </h5>
+                                                            {chapter.description && (
+                                                              <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5 truncate max-w-lg">
+                                                                {chapter.description}
+                                                              </p>
+                                                            )}
+                                                          </div>
+                                                          <div className="flex items-center space-x-2 shrink-0">
+                                                            <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/20 px-2 py-0.5 rounded-full">
+                                                              {chapCount} Qs
+                                                            </span>
+                                                            {isChapExpanded ? (
+                                                              <ChevronDown className="h-3.5 w-3.5 text-slate-400 rotate-180" />
+                                                            ) : (
+                                                              <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                                                            )}
+                                                          </div>
+                                                        </div>
+
+                                                        {/* Subchapters / Topics List */}
+                                                        <AnimatePresence initial={false}>
+                                                          {isChapExpanded && (
+                                                            <motion.div
+                                                              initial={{ height: 0, opacity: 0 }}
+                                                              animate={{ height: "auto", opacity: 1 }}
+                                                              exit={{ height: 0, opacity: 0 }}
+                                                              transition={{ duration: 0.15 }}
+                                                              className="overflow-hidden"
+                                                            >
+                                                              <div className="p-2 bg-slate-50 dark:bg-zinc-900/20 border-t border-slate-100 dark:border-zinc-800/30 space-y-1">
+                                                                {/* Launch All Row */}
+                                                                <div
+                                                                  onClick={() => {
+                                                                    setSelectedChapter(chapter.name);
+                                                                    setSelectedTopic('All');
+                                                                    setChapterFilterMode('all');
+                                                                    setViewState('QUESTIONS_LIST');
+                                                                  }}
+                                                                  className="p-2 bg-indigo-50/20 dark:bg-indigo-950/10 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 rounded-md flex items-center justify-between text-[11px] transition-colors cursor-pointer"
+                                                                >
+                                                                  <span className="font-extrabold text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
+                                                                    <Layers className="h-3 w-3" />
+                                                                    📚 Complete Chapter Qs (All Topics)
+                                                                  </span>
+                                                                  <span className="text-[9px] font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-100/50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded">
+                                                                    {chapCount} Qs
+                                                                  </span>
+                                                                </div>
+
+                                                                {/* Individual Subtopics */}
+                                                                {chapTopics.map(topic => {
+                                                                  const topicCount = questions.filter(q => q.subject === selectedSubject && q.chapter === chapter.name && q.topic === topic).length;
+                                                                  return (
+                                                                    <div
+                                                                      key={topic}
+                                                                      onClick={() => {
+                                                                        setSelectedChapter(chapter.name);
+                                                                        setSelectedTopic(topic);
+                                                                        setChapterFilterMode('topic');
+                                                                        setViewState('QUESTIONS_LIST');
+                                                                      }}
+                                                                      className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800/50 rounded-md flex items-center justify-between text-[11px] transition-colors cursor-pointer text-slate-700 dark:text-zinc-300"
+                                                                    >
+                                                                      <span className="truncate pr-4 font-medium flex items-center gap-1.5">
+                                                                        <FileText className="h-3 w-3 text-slate-400" />
+                                                                        {topic}
+                                                                      </span>
+                                                                      <span className="text-[9px] font-bold text-slate-400 bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded shrink-0">
+                                                                        {topicCount} Qs
+                                                                      </span>
+                                                                    </div>
+                                                                  );
+                                                                })}
+                                                              </div>
+                                                            </motion.div>
+                                                          )}
+                                                        </AnimatePresence>
+                                                      </div>
+                                                    );
+                                                  })}
+                                                </div>
+                                              </motion.div>
+                                            )}
+                                          </AnimatePresence>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })()
+                            ) : (
+                              /* Standard/Uncategorized Sections (Section 1, 2, 3 and Annexures) - Display Chapters Directly */
+                              <div className="space-y-2.5 pl-2">
+                                {sectionChapters.map((chapter) => {
+                                  const isChapExpanded = !!expandedChapters[chapter.name];
+                                  const chapCount = syllabusCounts.chapters[chapter.name] || 0;
+                                  const chapTopics = dynamicSyllabus[selectedSubject]?.[chapter.name] || [];
+
+                                  return (
+                                    <div key={chapter.name} className="border border-slate-200/60 dark:border-zinc-800/50 rounded-xl bg-white dark:bg-[#18181b] overflow-hidden">
+                                      {/* Chapter Header */}
+                                      <div
+                                        onClick={() => setExpandedChapters(prev => ({ ...prev, [chapter.name]: !prev[chapter.name] }))}
+                                        className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-900/20 transition-colors"
+                                      >
+                                        <div className="min-w-0 pr-4">
+                                          <h5 className="font-extrabold text-xs text-slate-800 dark:text-zinc-200 leading-tight">
+                                            {chapter.name}
+                                          </h5>
+                                          {chapter.description && (
+                                            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5 truncate max-w-lg">
+                                              {chapter.description}
+                                            </p>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center space-x-2 shrink-0">
+                                          <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/20 px-2 py-0.5 rounded-full">
+                                            {chapCount} Qs
+                                          </span>
+                                          {isChapExpanded ? (
+                                            <ChevronDown className="h-3.5 w-3.5 text-slate-400 rotate-180" />
+                                          ) : (
+                                            <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Subchapters / Topics List */}
+                                      <AnimatePresence initial={false}>
+                                        {isChapExpanded && (
+                                          <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="overflow-hidden"
+                                          >
+                                            <div className="p-2 bg-slate-50 dark:bg-zinc-900/20 border-t border-slate-100 dark:border-zinc-800/30 space-y-1">
+                                              {/* Launch All Row */}
+                                              <div
+                                                onClick={() => {
+                                                  setSelectedChapter(chapter.name);
+                                                  setSelectedTopic('All');
+                                                  setChapterFilterMode('all');
+                                                  setViewState('QUESTIONS_LIST');
+                                                }}
+                                                className="p-2 bg-indigo-50/20 dark:bg-indigo-950/10 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 rounded-md flex items-center justify-between text-[11px] transition-colors cursor-pointer"
+                                              >
+                                                <span className="font-extrabold text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
+                                                  <Layers className="h-3 w-3" />
+                                                  📚 Complete Chapter Qs (All Topics)
+                                                </span>
+                                                <span className="text-[9px] font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-100/50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded">
+                                                  {chapCount} Qs
+                                                </span>
+                                              </div>
+
+                                              {/* Individual Subtopics */}
+                                              {chapTopics.map(topic => {
+                                                const topicCount = questions.filter(q => q.subject === selectedSubject && q.chapter === chapter.name && q.topic === topic).length;
+                                                return (
+                                                  <div
+                                                    key={topic}
+                                                    onClick={() => {
+                                                      setSelectedChapter(chapter.name);
+                                                      setSelectedTopic(topic);
+                                                      setChapterFilterMode('topic');
+                                                      setViewState('QUESTIONS_LIST');
+                                                    }}
+                                                    className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800/50 rounded-md flex items-center justify-between text-[11px] transition-colors cursor-pointer text-slate-700 dark:text-zinc-300"
+                                                  >
+                                                    <span className="truncate pr-4 font-medium flex items-center gap-1.5">
+                                                      <FileText className="h-3 w-3 text-slate-400" />
+                                                      {topic}
+                                                    </span>
+                                                    <span className="text-[9px] font-bold text-slate-400 bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded shrink-0">
+                                                      {topicCount} Qs
+                                                    </span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          </motion.div>
+                                        )}
+                                      </AnimatePresence>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 );
               })}
             </div>
+          ) : (
+            /* Fallback Grid View for Non-Hierarchical Subjects (Anatomy, Physiology, Pathology, Pharmacology) */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Object.keys(dynamicSyllabus[selectedSubject] || {}).map((chap, cIdx) => {
+                const count = syllabusCounts.chapters[chap] || 0;
+                const topicsCount = dynamicSyllabus[selectedSubject][chap]?.length || 0;
 
-            {/* Individual Mock Tests Section */}
-            <div className="border-t border-[#e4e4e7] dark:border-[#27272a] pt-4 space-y-2">
-              <span className="font-extrabold text-[10px] text-slate-400 dark:text-zinc-500 uppercase tracking-wider block mb-1">Individual Mock Tests</span>
-              <div className="space-y-1.5">
-                {individualTests.map(test => {
-                  const testQs = questions.filter(q => q.subject === test.subject);
-                  
-                  return (
-                    <button
-                      key={test.name}
-                      onClick={() => launchExamMode(testQs, test.name)}
-                      className="w-full text-left p-2 border border-dashed border-slate-200 dark:border-zinc-800 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-lg flex items-center justify-between text-[11px] transition-colors hover:bg-slate-50 dark:hover:bg-zinc-900 cursor-pointer"
-                    >
-                      <div className="flex items-center space-x-2 min-w-0">
-                        <Award className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                        <span className="font-bold text-slate-700 dark:text-zinc-300 truncate">{test.name}</span>
+                return (
+                  <div
+                    key={chap}
+                    onClick={() => handleSelectSyllabusNode(selectedSubject, chap)}
+                    className="bg-white dark:bg-[#18181b] border border-[#e4e4e7] dark:border-[#27272a] rounded-2xl p-5 hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between space-y-4 text-left animate-fade-in"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start">
+                        <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/20 px-2 py-0.5 rounded-full">
+                          Chapter {cIdx + 1}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-bold">
+                          {count} Questions
+                        </span>
                       </div>
-                      <span className="text-[9px] bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 font-extrabold px-1.5 py-0.5 rounded">
-                        Exam Mode
+                      <h4 className="font-extrabold text-sm text-slate-950 dark:text-white leading-snug">
+                        {chap}
+                      </h4>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-50 dark:border-zinc-800/60 flex justify-between items-center">
+                      <span className="text-[11px] font-semibold text-slate-400">
+                        {topicsCount} Topics Defined
                       </span>
-                    </button>
+                      <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 group flex items-center">
+                        Open Dashboard →
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {viewState === 'CHAPTER_DASHBOARD' && selectedSubject !== 'All' && selectedChapter !== 'All' && (
+        <div className="space-y-6">
+          {showTopicSelector ? (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight uppercase">
+                    Select a Topic under {selectedChapter}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Practice focused MCQs for a specific sub-topic.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTopicSelector(false)}
+                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  ← Back to Chapter Dashboard
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(dynamicSyllabus[selectedSubject]?.[selectedChapter] || []).map((topic) => {
+                  const topicCount = questions.filter(q => q.subject === selectedSubject && q.chapter === selectedChapter && q.topic === topic).length;
+                  return (
+                    <div
+                      key={topic}
+                      onClick={() => {
+                        setSelectedTopic(topic);
+                        setChapterFilterMode('topic');
+                        setViewState('QUESTIONS_LIST');
+                        setShowTopicSelector(false);
+                      }}
+                      className="bg-white dark:bg-[#18181b] border border-[#e4e4e7] dark:border-[#27272a] rounded-2xl p-4 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-sm cursor-pointer transition-all flex items-center justify-between text-left"
+                    >
+                      <div className="space-y-0.5 pr-2 min-w-0">
+                        <h5 className="font-bold text-xs text-slate-800 dark:text-zinc-200 truncate">{topic}</h5>
+                        <span className="text-[10px] font-semibold text-slate-400">Focused practice pool</span>
+                      </div>
+                      <span className="text-[10px] font-extrabold bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 px-2.5 py-1 rounded-full shrink-0">
+                        {topicCount} Qs
+                      </span>
+                    </div>
                   );
                 })}
               </div>
             </div>
-          </div>
-        </div>
-        )}
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight uppercase">
+                    {selectedChapter} Dashboard
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Select a high-yield learning mode to start practicing.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedChapter('All');
+                    setViewState('CHAPTERS');
+                  }}
+                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  ← Back to Chapter List
+                </button>
+              </div>
 
-        {/* Right Side: Questions list and interactive filters */}
-        <div className="lg:col-span-8 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Mode 1: Solve Chapter MCQs */}
+                <div
+                  onClick={() => {
+                    setChapterFilterMode('all');
+                    setSelectedTopic('All');
+                    setViewState('QUESTIONS_LIST');
+                  }}
+                  className="bg-white dark:bg-[#18181b] border border-[#e4e4e7] dark:border-[#27272a] rounded-2xl p-6 hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between space-y-4 text-left"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 rounded-xl">
+                        <BookOpen className="h-5 w-5" />
+                      </div>
+                      <span className="text-[10px] font-extrabold bg-blue-100/50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-2.5 py-0.5 rounded-full">
+                        {questions.filter(q => q.subject === selectedSubject && q.chapter === selectedChapter).length} Qs
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-sm text-slate-950 dark:text-white">
+                        Solve Chapter MCQs
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 leading-relaxed font-medium">
+                        Practice all available clinical and one-liner board questions within this chapter sequentially.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                    Start Solving →
+                  </span>
+                </div>
+
+                {/* Mode 2: Topic-wise MCQs */}
+                <div
+                  onClick={() => {
+                    setShowTopicSelector(true);
+                  }}
+                  className="bg-white dark:bg-[#18181b] border border-[#e4e4e7] dark:border-[#27272a] rounded-2xl p-6 hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between space-y-4 text-left"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                        <Layers className="h-5 w-5" />
+                      </div>
+                      <span className="text-[10px] font-extrabold bg-indigo-100/50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 px-2.5 py-0.5 rounded-full">
+                        {(dynamicSyllabus[selectedSubject]?.[selectedChapter] || []).length} Topics
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-sm text-slate-950 dark:text-white">
+                        Topic-wise MCQs
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 leading-relaxed font-medium">
+                        Drill down into highly specific pathological, pharmacological, or microbiological sub-topics.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                    Select Topic →
+                  </span>
+                </div>
+
+                {/* Mode 3: Image-based Questions */}
+                <div
+                  onClick={() => {
+                    setChapterFilterMode('image');
+                    setSelectedTopic('All');
+                    setViewState('QUESTIONS_LIST');
+                  }}
+                  className="bg-white dark:bg-[#18181b] border border-[#e4e4e7] dark:border-[#27272a] rounded-2xl p-6 hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between space-y-4 text-left"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="p-2.5 bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 rounded-xl">
+                        <ImageIcon className="h-5 w-5" />
+                      </div>
+                      <span className="text-[10px] font-extrabold bg-amber-100/50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 px-2.5 py-0.5 rounded-full">
+                        {questions.filter(q => q.subject === selectedSubject && q.chapter === selectedChapter && (!!q.image || ['Image Based', 'Image-based MCQ'].includes(q.type) || (q.tags && q.tags.some(tag => tag.toLowerCase().includes('image'))))).length} Qs
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-sm text-slate-950 dark:text-white">
+                        Image-based Questions
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 leading-relaxed font-medium">
+                        Focus purely on diagnostic illustrations, histopathology microphotographs, and clinical slides.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    Practice Images →
+                  </span>
+                </div>
+
+                {/* Mode 4: Clinical Case Questions */}
+                <div
+                  onClick={() => {
+                    setChapterFilterMode('clinical');
+                    setSelectedTopic('All');
+                    setViewState('QUESTIONS_LIST');
+                  }}
+                  className="bg-white dark:bg-[#18181b] border border-[#e4e4e7] dark:border-[#27272a] rounded-2xl p-6 hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between space-y-4 text-left"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="p-2.5 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 rounded-xl">
+                        <Stethoscope className="h-5 w-5" />
+                      </div>
+                      <span className="text-[10px] font-extrabold bg-rose-100/50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 px-2.5 py-0.5 rounded-full">
+                        {questions.filter(q => q.subject === selectedSubject && q.chapter === selectedChapter && (['Clinical Scenario', 'Clinical Case Based', 'Case-based MCQ'].includes(q.type) || (q.tags && q.tags.some(tag => tag.toLowerCase().includes('clinical'))) || q.question.toLowerCase().includes('old') || q.question.toLowerCase().includes('presents with'))).length} Qs
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-sm text-slate-950 dark:text-white">
+                        Clinical Case Questions
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 leading-relaxed font-medium">
+                        Master complex patient case histories, pathology lab panels, and critical diagnostic scenarios.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                    Solve Cases →
+                  </span>
+                </div>
+
+                {/* Mode 5: Previous Year Questions */}
+                <div
+                  onClick={() => {
+                    setChapterFilterMode('pyq');
+                    setSelectedTopic('All');
+                    setViewState('QUESTIONS_LIST');
+                  }}
+                  className="bg-white dark:bg-[#18181b] border border-[#e4e4e7] dark:border-[#27272a] rounded-2xl p-6 hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between space-y-4 text-left"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                        <Award className="h-5 w-5" />
+                      </div>
+                      <span className="text-[10px] font-extrabold bg-emerald-100/50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full">
+                        {questions.filter(q => q.subject === selectedSubject && q.chapter === selectedChapter && ((q.targetExams && q.targetExams.length > 0) || !!q.examSource || (q.tags && q.tags.some(t => ['pyq', 'neet', 'ini-cet', 'fmge'].includes(t.toLowerCase()))))).length} Qs
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-sm text-slate-950 dark:text-white">
+                        Previous Year Questions (PYQs)
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 leading-relaxed font-medium">
+                        Analyze authentic questions straight from previous NEET PG, INI-CET, FMGE, and university exams.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    Practice PYQs →
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {viewState === 'QUESTIONS_LIST' && (
+        <div className="space-y-5">
           {/* Active navigation state overview */}
           <div className="bg-white dark:bg-[#18181b] border border-[#e4e4e7] dark:border-[#27272a] rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="space-y-0.5 text-left">
@@ -1004,7 +2173,21 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
                       >
                         {mcq.question}
                       </h3>
-                      {mcq.image && (
+                      {mcq.images && Array.isArray(mcq.images) && mcq.images.length > 0 ? (
+                        <div className="flex flex-col gap-2.5 my-3">
+                          {mcq.images.map((imgUrl, idx) => (
+                            <div key={idx} className="max-w-sm rounded-lg overflow-hidden border border-[#e4e4e7] dark:border-[#27272a] bg-slate-50 dark:bg-black flex justify-center">
+                              <img 
+                                src={imgUrl} 
+                                alt={`Medical clinical clue ${idx}`} 
+                                className="object-contain max-h-[300px] w-full" 
+                                referrerPolicy="no-referrer"
+                                loading="lazy"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : mcq.image && (
                         <div className="my-3 max-w-sm rounded-lg overflow-hidden border border-[#e4e4e7] dark:border-[#27272a] bg-slate-50 dark:bg-black flex justify-center">
                           <img 
                             src={mcq.image} 
@@ -1171,7 +2354,7 @@ export default function QBank({ onStartQuiz, onQuestionClick }: QBankProps) {
             </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* AI Diagnostic Tutor Modal */}
       <AnimatePresence>

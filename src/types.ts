@@ -4,6 +4,7 @@ export interface Chapter {
   id: string;
   name: string;
   subject: SubjectName;
+  section?: string;
   description: string;
   displayOrder?: number;
   isActive?: boolean;
@@ -49,6 +50,7 @@ export interface MCQ {
   approved?: boolean;
   tags: string[];
   image?: string;
+  images?: string[];
   examSource?: string; // deprecated
   targetExams?: string[];
   type: 'Single Best Answer' | 'Multiple Correct' | 'True/False' | 'Image Based' | 'Case-based MCQ' | 'Clinical Scenario' | 'Match the Following' | 'Assertion-Reason' | 'Multiple Correct Answers' | 'Assertion & Reason' | 'Clinical Case Based' | 'Image-based MCQ' | 'Single Best Answer (SBA)';

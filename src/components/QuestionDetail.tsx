@@ -265,7 +265,20 @@ export default function QuestionDetail({ questionId, onBack, onStartQuiz }: Ques
             {question.question}
           </h2>
 
-          {question.image && (
+          {question.images && Array.isArray(question.images) && question.images.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {question.images.map((imgUrl, idx) => (
+                <div key={idx} className="rounded-xl overflow-hidden border border-[#e4e4e7] dark:border-[#27272a] max-w-lg bg-slate-50 dark:bg-black flex justify-center">
+                  <img 
+                    src={imgUrl} 
+                    alt={`Clinical Clue Media ${idx}`} 
+                    className="w-full h-auto object-contain max-h-[400px]"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : question.image && (
             <div className="rounded-xl overflow-hidden border border-[#e4e4e7] dark:border-[#27272a] max-w-lg bg-slate-50 dark:bg-black flex justify-center">
               <img 
                 src={question.image} 

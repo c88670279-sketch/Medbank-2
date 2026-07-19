@@ -11,7 +11,7 @@ import {
   getSavedUser, saveUser, clearUser, getStats,
   getRecentActivities, getStudyStreak, updateStudyStreak, getUserScopedKey, MOCK_CHAPTERS, MOCK_TOPICS
 } from './lib/mockData';
-import { fetchDBNotes, fetchDBQuestions, fetchDBTestResults, fetchDBChapters, fetchDBUser, fetchDBTopics, fetchDBSubjects } from './lib/api';
+import { fetchDBNotes, fetchDBQuestions, fetchDBTestResults, fetchDBChapters, fetchDBUser, fetchDBTopics, fetchDBSubjects, fetchDBQuestionCounts } from './lib/api';
 import { safeStorage } from './lib/safeStorage';
 
 // Component Imports
@@ -115,17 +115,33 @@ export default function App() {
 
       if (liveChapters) {
         setDbChapters(liveChapters);
+        safeStorage.setItem('medbank_cached_chapters', JSON.stringify(liveChapters));
       }
 
       if (liveTopics) {
         setDbTopics(liveTopics);
+        safeStorage.setItem('medbank_cached_topics', JSON.stringify(liveTopics));
       }
 
       if (liveSubjects) {
         setDbSubjects(liveSubjects);
+        safeStorage.setItem('medbank_cached_subjects', JSON.stringify(liveSubjects));
       }
 
       setIsInitialSyncDone(true);
+
+      // Prefetch question counts in background and cache
+      const userStr = safeStorage.getItem('medbank_user');
+      const userObj = userStr ? JSON.parse(userStr) : null;
+      if (userObj?.email) {
+        fetchDBQuestionCounts(userObj.email).then((counts) => {
+          if (counts) {
+            safeStorage.setItem('medbank_cached_counts', JSON.stringify(counts));
+          }
+        }).catch((e) => {
+          console.error('Failed to prefetch question counts:', e);
+        });
+      }
 
       let hasUpdates = false;
 

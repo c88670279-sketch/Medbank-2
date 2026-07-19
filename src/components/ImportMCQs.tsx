@@ -82,6 +82,8 @@ export default function ImportMCQs({ onRefreshData, onStartQuiz }: ImportMCQsPro
   const [sourceRenameNew, setSourceRenameNew] = useState('');
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState<string[]>(['All Question Types']);
   const [showQuestionTypesDropdown, setShowQuestionTypesDropdown] = useState(false);
+  const [targetExam, setTargetExam] = useState<string>('NEET PG');
+  const [showTargetExamDropdown, setShowTargetExamDropdown] = useState(false);
 
   // Dynamic Subjects, Chapters and Counts
   const [subjectsList, setSubjectsList] = useState<any[]>([]);
@@ -400,7 +402,8 @@ export default function ImportMCQs({ onRefreshData, onStartQuiz }: ImportMCQsPro
                   subject,
                   chapter: chapter || undefined,
                   topic: topic || undefined,
-                    sourceName
+                  sourceName,
+                  targetExam
                 });
                 break;
               } catch (apiErr: any) {
@@ -468,7 +471,8 @@ export default function ImportMCQs({ onRefreshData, onStartQuiz }: ImportMCQsPro
                     subject,
                     chapter: chapter || undefined,
                     topic: topic || undefined,
-                    sourceName
+                    sourceName,
+                    targetExam
                   });
                   break;
                 } catch (apiErr: any) {
@@ -508,55 +512,54 @@ export default function ImportMCQs({ onRefreshData, onStartQuiz }: ImportMCQsPro
               const pdf = await loadingTask.promise;
               const numPages = pdf.numPages;
 
-              // Batch large PDFs into chunks of 8 pages each for performance stability and to prevent timeouts
-              const batchSize = 8;
+              // Page-by-page processing for maximum stability and high-fidelity image extraction
               const pageStart = Math.max(1, start);
               const pageEnd = Math.min(numPages, end);
               const totalPagesToProcess = pageEnd - pageStart + 1;
-              const totalBatches = Math.ceil(totalPagesToProcess / batchSize);
 
               let fileAccumMcqs: MCQ[] = [];
 
-              for (let b = 0; b < totalBatches; b++) {
+              for (let p = pageStart; p <= pageEnd; p++) {
                 if (processingIdRef.current !== runId) break;
 
-                const bStart = pageStart + b * batchSize;
-                const bEnd = Math.min(pageStart + (b + 1) * batchSize - 1, pageEnd);
-                
-                const progressPercent = Math.round(15 + (b / totalBatches) * 75);
+                const progressPercent = Math.round(15 + ((p - pageStart) / totalPagesToProcess) * 75);
                 setFileQueue(prev => prev.map((f, idx) => idx === index ? { ...f, progress: progressPercent } : f));
-                addLog(`Processing PDF batch ${b + 1}/${totalBatches} (Pages ${bStart}-${bEnd})...`);
+                addLog(`Processing PDF Page ${p}/${numPages}...`);
 
-                // Phase 1: Extract text
-                let textBatch = '';
-                let isScannedPageDetected = false;
+                // Phase 1: Extract Text
+                let pageText = '';
+                try {
+                  const page = await pdf.getPage(p);
+                  const textContent = await page.getTextContent();
+                  pageText = textContent.items.map((it: any) => it.str).join(' ');
+                } catch (pageErr) {
+                  console.error(`Page text read error on ${p}:`, pageErr);
+                }
 
-                for (let p = bStart; p <= bEnd; p++) {
-                  if (processingIdRef.current !== runId) break;
-                  setFileQueue(prev => prev.map((f, idx) => idx === index ? { ...f, progress: Math.round(progressPercent + ((p - bStart) / (bEnd - bStart + 1)) * (75 / totalBatches)) } : f));
+                // Phase 2: Render Page as High-Quality Image Canvas
+                let pageImageBase64 = '';
+                try {
+                  addLog(`Rendering page ${p} to high-fidelity image canvas for visual detection...`);
+                  const page = await pdf.getPage(p);
+                  // We use a scale of 1.5 to strike the perfect balance between crisp visual detail and lightweight transmission size
+                  const viewport = page.getViewport({ scale: 1.5 });
+                  const canvas = document.createElement('canvas');
+                  canvas.width = viewport.width;
+                  canvas.height = viewport.height;
+                  const ctx = canvas.getContext('2d');
                   
-                  try {
-                    const page = await pdf.getPage(p);
-                    const textContent = await page.getTextContent();
-                    const pageText = textContent.items.map((it: any) => it.str).join(' ');
-                    textBatch += `\n--- PAGE ${p} ---\n${pageText}`;
-
-                    if (pageText.trim().length < 40) {
-                      isScannedPageDetected = true;
-                    }
-                  } catch (pageErr) {
-                    console.error(`Page read error on ${p}:`, pageErr);
+                  if (ctx) {
+                    await page.render({ canvasContext: ctx, viewport }).promise;
+                    // Quality 0.85 JPEG base64
+                    pageImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
                   }
+                } catch (renderErr) {
+                  console.error(`Page render error on ${p}:`, renderErr);
                 }
 
                 if (processingIdRef.current !== runId) break;
 
-                // Call unified import API
-                if (isScannedPageDetected && textBatch.trim().length < 200) {
-                  addLog(`Scanned page or high clinical illustration ratio detected in pages ${bStart}-${bEnd}. Activating high-fidelity visual-first mode...`);
-                } else {
-                  addLog(`Extracting MBBS questions from digital content batch (Pages ${bStart}-${bEnd})...`);
-                }
+                addLog(`Extracting MBBS questions from page ${p} (High-fidelity visual-first mode)...`);
 
                 let result;
                 let attempts = 0;
@@ -568,14 +571,16 @@ export default function ImportMCQs({ onRefreshData, onStartQuiz }: ImportMCQsPro
                     attempts++;
                     result = await importMCQs({
                       fileType: 'pdf',
-                      textBatch: textBatch.trim().length > 100 ? textBatch : undefined,
+                      textBatch: pageText.trim().length > 0 ? pageText : undefined,
+                      image: pageImageBase64 || undefined,
+                      mimeType: 'image/jpeg',
                       questionTypes: selectedQuestionTypes,
-                      pdfBase64: textBatch.trim().length <= 100 ? await convertPdfPagesToBase64(item.file, bStart, bEnd) : undefined,
                       mode: importMode,
                       subject,
                       chapter: chapter || undefined,
                       topic: topic || undefined,
-                    sourceName
+                      sourceName,
+                      targetExam
                     });
                     break;
                   } catch (apiErr: any) {
@@ -839,6 +844,9 @@ export default function ImportMCQs({ onRefreshData, onStartQuiz }: ImportMCQsPro
                     onClick={() => {
                       setShowSubjectDropdown(!showSubjectDropdown);
                       setShowChapterDropdown(false);
+                      setShowSourceDropdown(false);
+                      setShowQuestionTypesDropdown(false);
+                      setShowTargetExamDropdown(false);
                     }}
                     className="w-full flex justify-between items-center px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 text-left focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   >
@@ -905,6 +913,9 @@ export default function ImportMCQs({ onRefreshData, onStartQuiz }: ImportMCQsPro
                 onClick={() => {
                   setShowChapterDropdown(!showChapterDropdown);
                   setShowSubjectDropdown(false);
+                  setShowSourceDropdown(false);
+                  setShowQuestionTypesDropdown(false);
+                  setShowTargetExamDropdown(false);
                 }}
                 className="w-full flex justify-between items-center px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 text-left focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
@@ -1012,6 +1023,8 @@ export default function ImportMCQs({ onRefreshData, onStartQuiz }: ImportMCQsPro
                     setShowSourceDropdown(!showSourceDropdown);
                     setShowSubjectDropdown(false);
                     setShowChapterDropdown(false);
+                    setShowQuestionTypesDropdown(false);
+                    setShowTargetExamDropdown(false);
                   }}
                   className="flex-1 flex justify-between items-center px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 text-left focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
@@ -1163,6 +1176,62 @@ export default function ImportMCQs({ onRefreshData, onStartQuiz }: ImportMCQsPro
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Target Exam Dropdown */}
+            <div className="relative pt-2 border-t border-slate-100 dark:border-zinc-900">
+              <label className="block text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase mb-1">
+                Target Exam <span className="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTargetExamDropdown(!showTargetExamDropdown);
+                  setShowQuestionTypesDropdown(false);
+                  setShowSourceDropdown(false);
+                  setShowSubjectDropdown(false);
+                  setShowChapterDropdown(false);
+                }}
+                className="w-full flex justify-between items-center px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 text-left focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              >
+                <span className="truncate pr-2">{targetExam || 'Select Target Exam...'}</span>
+                <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
+              </button>
+
+              {showTargetExamDropdown && (
+                <div className="absolute z-30 mt-1 w-full bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xl p-2.5 max-h-[250px] overflow-y-auto">
+                  <div className="space-y-1">
+                    {[
+                      'NEET PG',
+                      'INI-CET',
+                      'FMGE',
+                      'USMLE Step 1',
+                      'USMLE Step 2 CK',
+                      'NEXT',
+                      'University Exam',
+                      'Custom'
+                    ].map((exam) => {
+                      const isSelected = targetExam === exam;
+                      return (
+                        <button
+                          key={exam}
+                          type="button"
+                          onClick={() => {
+                            setTargetExam(exam);
+                            setShowTargetExamDropdown(false);
+                          }}
+                          className="w-full text-left px-2 py-1.5 text-xs rounded-lg flex items-center justify-between group hover:bg-slate-50 dark:hover:bg-zinc-900"
+                        >
+                          <span className={`font-medium ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                            {exam}
+                          </span>
+                          {isSelected && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Question Types Filter */}
             <div className="relative pt-2 border-t border-slate-100 dark:border-zinc-900">
