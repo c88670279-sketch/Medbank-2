@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { GUYTON_PHYSIOLOGY_DATA } from '../lib/guytonPhysiology';
+import { GUYTON_PHYSIOLOGY_DATA } from '../lib/guytonPhysiology.js';
 
 // Disable command buffering globally so that queries fail fast when offline instead of hanging
 mongoose.set('bufferCommands', false);

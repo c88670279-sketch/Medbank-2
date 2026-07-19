@@ -1,5 +1,5 @@
 // Guyton and Hall Physiology 84 Chapters list mapping to Unit Sections
-import { Chapter } from '../types';
+import { Chapter } from '../types.js';
 
 export interface GuytonChapterData {
   chapterNum: number;
