@@ -201,7 +201,7 @@ export default function ImageMCQExtractor({ onRefreshData, onStartQuiz }: ImageM
   // Remove a file from the list & delete from MongoDB if successfully extracted
   const removeFile = async (id: string) => {
     const target = uploadList.find((item) => item.id === id);
-    if (target && target.extractedMcq) {
+    if (target && target.extractedMcq && target.extractedMcq.id) {
       console.log(`[LOG] [Image Extractor] Deleting extracted MCQ ${target.extractedMcq.id} from MongoDB...`);
       try {
         const response = await fetch(`/api/questions/${target.extractedMcq.id}`, {
@@ -215,6 +215,8 @@ export default function ImageMCQExtractor({ onRefreshData, onStartQuiz }: ImageM
       } catch (err) {
         console.error(`[LOG] [Image Extractor] Error deleting MCQ ${target.extractedMcq.id} from MongoDB:`, err);
       }
+    } else if (target && target.extractedMcq) {
+      console.warn(`[LOG] [Image Extractor] Cannot delete MCQ: Missing ID for item ${id}`);
     }
 
     setUploadList((prev) => {
